@@ -14,9 +14,6 @@ C21_new <- read_excel("Arctic_charr_re_id_caves_a_and_b.xlsx", sheet = "Wide for
 old <- as.data.frame(rbind(C10_old,C21_old))
 new <- as.data.frame(rbind(C10_new,C21_new))
 
-# Make sure that the tag that was corrected since receiving the file from Ignacy is corrected here
-new$Tag[which(new$Tag=="CAL15-2427")] <- "655177"
-new[which(new$Tag=="655177"),]
 # Merge capture histories
 new[237,"2015 June"] <- 1
 new <- new[-227,]
