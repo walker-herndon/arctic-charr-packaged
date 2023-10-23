@@ -1,11 +1,9 @@
+import math
+
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-import os
-import csv
-import math
-import json
-from PIL import Image, ExifTags
+from PIL import Image
 
 
 def visualize(
@@ -44,15 +42,15 @@ def visualize(
             ax.add_patch(poly)
 
     if annotateOrder:
-        for i in range(0, len(selected)):
-            ax.annotate(i + 1, (selected[i][0], selected[i][1]))
+        for i, selection in enumerate(selected):
+            ax.annotate(i + 1, (selection[0], selection[1]))
 
     ax.legend(loc="upper left", fontsize="large")
     plt.draw()
     plt.show()
 
 
-def cv2_imshow(image, title=None, cmap=None, dpi=100):
+def cv2_imshow(image, cmap=None, dpi=100):
     image = image.clip(0, 255).astype("uint8")
     # cv2 stores colors as BGR; convert to RGB
     if image.ndim == 3:
@@ -60,7 +58,7 @@ def cv2_imshow(image, title=None, cmap=None, dpi=100):
             image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA)
         else:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    elif image.ndim == 2 and cmap == None:
+    elif image.ndim == 2 and cmap is None:
         # Is grayscale
         cmap = "gray"
 
@@ -82,7 +80,7 @@ def find_center_mask(image, min_mask_area=10000):
 
     centerX = int(w / 2)
     centerY = int(h / 2)
-    contours, hier = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contourSorted = []
     for cnt in contours:
         if cv2.contourArea(cnt) > min_mask_area:
@@ -102,10 +100,10 @@ def find_center_mask(image, min_mask_area=10000):
 
 def get_image_mask(img):
     blurred = cv2.GaussianBlur(img, (125, 125), 125)
-    ret, thresh = cv2.threshold(blurred, 80, 140, cv2.THRESH_BINARY_INV)
+    _, thresh = cv2.threshold(blurred, 80, 140, cv2.THRESH_BINARY_INV)
     # Fill in holes in mask
     mainMask = find_center_mask(thresh)
-    contour, hier = cv2.findContours(mainMask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    contour, _ = cv2.findContours(mainMask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     for cnt in contour:
         cv2.drawContours(mainMask, [cnt], 0, 255, -1)
     return mainMask
@@ -223,7 +221,7 @@ def pointcloud_to_image(pc, xSize, ySize):
     for p in np.asarray(pc.points):
         try:
             translatedImage[int(p[0]), int(p[1])] = 255
-        except Exception as e:
+        except IndexError:
             pass
     return translatedImage
 
@@ -275,10 +273,9 @@ def get_average_precision_recall(
 ):
     precisionTotal = 0
     recallTotal = 0
-    for i in range(len(generatedMasks)):
+    for i, generated in enumerate(generatedMasks):
         if verbose:
             print(i, names[i] if names is not None else "")
-        generated = generatedMasks[i]
         label = labels[i]
         TP_mat = np.logical_and(generated, label)
         FP_mat = np.logical_and(generated, np.invert(label))
@@ -328,6 +325,6 @@ def get_normalise_direction_matrix(img):
     evals, evecs = np.linalg.eig(cov)
     sort_indices = np.argsort(evals)[::-1]
     x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-    x_v2, y_v2 = evecs[:, sort_indices[1]]
+    # x_v2, y_v2 = evecs[:, sort_indices[1]]
     theta = np.arctan((y_v1) / (x_v1)) * (180 / math.pi)
     return cv2.getRotationMatrix2D((centerX, centerY), theta, 1.0)

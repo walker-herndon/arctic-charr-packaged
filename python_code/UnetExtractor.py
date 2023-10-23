@@ -2,6 +2,7 @@
 import json
 import math
 import os
+
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -14,11 +15,11 @@ from Patch import PatchedImage
 from PIL import Image
 from sklearn.model_selection import train_test_split
 from util import (
-    read_PIL_image,
-    get_actual_img_bounds,
     crop_to_bounds,
     expand2square,
     find_center_mask,
+    get_actual_img_bounds,
+    read_PIL_image,
 )
 
 
@@ -873,7 +874,7 @@ class UnetMaskExtractor:
 
 
 def getPointsFromImage(img):
-    contour = cv2.findContours(img, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    contour, _ = cv2.findContours(img, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     spotsDrawn = 0
     points = []
     for cnt in sorted(contour, key=cv2.contourArea, reverse=True):

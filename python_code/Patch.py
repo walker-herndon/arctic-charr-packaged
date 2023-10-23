@@ -1,6 +1,7 @@
-from PIL import Image
 import math
+
 import numpy as np
+from PIL import Image
 
 
 class PatchedImage:

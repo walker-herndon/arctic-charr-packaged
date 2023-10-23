@@ -1,10 +1,11 @@
-import DBUtil
-import grothMatcherCustom
-import astroalignMatch
-import time
 import json
 import sys
+import time
 from enum import Enum
+
+import astroalignMatch
+import DBUtil
+import grothMatcherCustom
 import numpy as np
 
 
@@ -14,24 +15,20 @@ class Algorithm(Enum):
 
 
 class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        else:
-            return super(NpEncoder, self).default(obj)
+    def default(self, o):
+        if isinstance(o, np.integer):
+            return int(o)
+        if isinstance(o, np.floating):
+            return float(o)
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        return super().default(o)
 
 
 cave = 21
 algorithm = Algorithm.RANSAC_AFFINE
 
-resultFilename = "results.%s.C%d.json" % (
-    "aa" if algorithm == Algorithm.RANSAC_AFFINE else "customGroth",
-    cave,
-)
+resultFilename = f"results.{'aa' if algorithm == Algorithm.RANSAC_AFFINE else 'customGroth'}.C{cave}.json"
 print(resultFilename)
 
 
@@ -61,6 +58,7 @@ for i in range(15):
         rootDirs=["../all_images/", "patched/results/"],
     )
     totalDirectoryProcessingTime = 0
+    # pylint: disable=C0206, C0201
     for keyPath in testingImages.keys():
         potentialMatches = tagToFish[fishToTag[keyPath]]
         potentialMatches.remove(keyPath)
@@ -97,7 +95,7 @@ for i in range(15):
         elapsedTime = time.time() - currentTime
         totalDirectoryProcessingTime += elapsedTime
         results = [list(entry) for entry in results]
-        [entry.append(fishToTag[entry[-1]]) for entry in results]
+        # [entry.append(fishToTag[entry[-1]]) for entry in results]
 
         #         order = sorted(results, key=lambda x: x[0], reverse = True)
 
@@ -112,7 +110,7 @@ for i in range(15):
             "results": results,
         }
 
-        with open(resultFilename, "w") as f:
+        with open(resultFilename, "w", encoding="utf-8") as f:
             json.dump(totalResults, f, cls=NpEncoder)
 
     averageDirectoryTime = totalDirectoryProcessingTime / len(testingImages)

@@ -3,10 +3,11 @@ Matcher
 """
 
 import os
-import UnetExtractor
-from algorithms import Algorithm
+
 import astroalignMatch
 import grothMatcherCustom
+import UnetExtractor
+from algorithms import Algorithm
 
 
 def _translatePath(inPath):
