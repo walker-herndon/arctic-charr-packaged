@@ -1,8 +1,9 @@
-import pandas as pd
-import DBUtil
-from xlrd import XLRDError
-import numpy as np
 from collections.abc import Iterable
+
+import DBUtil
+import numpy as np
+import pandas as pd
+from xlrd import XLRDError
 
 
 class LengthMatcher:

@@ -1,25 +1,20 @@
 ##https://bitbucket.org/sergiopr/gmatch/src/default/
 
-import sys
-import math
+import collections
 import itertools
-import operator
+import json
 import logging
-from matplotlib import pyplot as plt
-from util import *
+import math
+import os
 import pickle
 
+import cv2
 import numpy as np
 
 # cKDTree does not supoort
 # query ball
-from scipy.spatial import cKDTree
-from scipy.spatial import distance_matrix
-
-import cv2
-import json
-
-import collections
+from scipy.spatial import cKDTree, distance_matrix
+from util import *
 
 _logger = logging.getLogger("gmatch")
 
@@ -407,23 +402,6 @@ def create_triang_(vlist, idx):
 
 def euclidian_distance(p1, p2):
     return math.sqrt(pow(p1[0] - p2[0], 2) + pow(p1[1] - p2[1], 2))
-
-
-def get_normalise_direction_matrix(img):
-    y, x = np.nonzero(img)
-    centerX = np.mean(x)
-    centerY = np.mean(y)
-    x = x - centerX
-    y = y - centerY
-    coords = np.vstack([x, y])
-    cov = np.cov(coords)
-    evals, evecs = np.linalg.eig(cov)
-    sort_indices = np.argsort(evals)[::-1]
-    x_v1, y_v1 = evecs[:, sort_indices[0]]  # Eigenvector with largest eigenvalue
-    x_v2, y_v2 = evecs[:, sort_indices[1]]
-    theta = np.arctan((y_v1) / (x_v1)) * (180 / math.pi)
-
-    return cv2.getRotationMatrix2D((centerX, centerY), theta, 1.0)
 
 
 def standardise_points(points):

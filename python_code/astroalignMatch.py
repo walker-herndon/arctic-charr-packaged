@@ -1,18 +1,18 @@
-import astroalign
-from scipy.spatial import cKDTree
-import pickle
 import json
-import skimage.transform
 import os
-import numpy as np
+import pickle
+
+import astroalign
 import cv2
+import numpy as np
+import skimage.transform
+from scipy.spatial import cKDTree
 from util import (
     crop_image,
     get_average_precision_recall,
     get_normalise_direction_matrix,
     visualize,
 )
-
 
 astroalign.MAX_CONTROL_POINTS = 50
 astroalign.MIN_MATCHES_FRACTION = 0.8
