@@ -10,7 +10,9 @@ class LengthMatcher:
     def __init__(self, mastersheet="final"):
         self.read_sheets = []
         self.mastersheet = mastersheet
-        pass
+        self.masterfile = None
+        self.tagEquivalences = {}
+        self.joint_df = None
 
     def read(
         self,
@@ -38,29 +40,27 @@ class LengthMatcher:
         try:
             dfs = [_preprocess_df(self.masterfile, self.mastersheet)]
             if verbose:
-                print("LengthMatcher: Read sheet %s" % self.mastersheet)
+                print(f"LengthMatcher: Read sheet {self.mastersheet}")
             self.read_sheets.append("final")
         except XLRDError as e:
             if verbose:
                 print(
-                    "LengthMatcher: Failed to retrieve data for date %s: %s"
-                    % (date, str(e))
+                    f"LengthMatcher: Failed to retrieve data for {self.mastersheet}: {str(e)}"
                 )
 
-        for date, year, monthIdx in DBUtil.generate_dates(
+        for date, _, _ in DBUtil.generate_dates(
             years=years, months=months, order=DBUtil.DateOrder.MONTH_YEAR
         ):
             try:
                 df = _preprocess_df(self.masterfile, date)
                 dfs.append(df)
                 if verbose:
-                    print("LengthMatcher: Read sheet %s" % date)
+                    print(f"LengthMatcher: Read sheet {date}")
                 self.read_sheets.append(date)
             except XLRDError as e:
                 if verbose:
                     print(
-                        "LengthMatcher: Failed to retrieve data for date %s: %s"
-                        % (date, str(e))
+                        f"LengthMatcher: Failed to retrieve data for date {date}: {str(e)}"
                     )
         self.joint_df = pd.concat(dfs, axis=0)
         self.joint_df["TAG"] = self.joint_df["TAG"].astype(str)
@@ -71,36 +71,34 @@ class LengthMatcher:
     def getLength(self, cave, tagID, year, month):
         tag = _standardise_tag(tagID)
         df = self.joint_df[
-            (self.joint_df["Location"] == "C%d" % cave)
-            & (self.joint_df["Fish ID"] == tag)
+            (self.joint_df["Location"] == "C{cave}") & (self.joint_df["Fish ID"] == tag)
             | (self.joint_df["TAG"] == tag)
             & (self.joint_df["year"] == year)
             & (self.joint_df["season"] == month)
         ]
         if df["length"].size > 0:
             return df["length"].iloc[0]
+        if tagID in self.tagEquivalences:
+            for tag in self.tagEquivalences[tagID]:
+                tag = _standardise_tag(tag)
+                df = self.joint_df[
+                    (self.joint_df["Location"] == f"C{cave}")
+                    & (self.joint_df["Fish ID"] == tag)
+                    | (self.joint_df["TAG"] == tag)
+                    & (self.joint_df["year"] == year)
+                    & (self.joint_df["season"] == month)
+                ]
+                if df["length"].size > 0:
+                    return df["length"].iloc[0]
+                else:
+                    return None
         else:
-            if tagID in self.tagEquivalences:
-                for tag in self.tagEquivalences[tagID]:
-                    tag = _standardise_tag(tag)
-                    df = self.joint_df[
-                        (self.joint_df["Location"] == "C%d" % cave)
-                        & (self.joint_df["Fish ID"] == tag)
-                        | (self.joint_df["TAG"] == tag)
-                        & (self.joint_df["year"] == year)
-                        & (self.joint_df["season"] == month)
-                    ]
-                    if df["length"].size > 0:
-                        return df["length"].iloc[0]
-                    else:
-                        return None
-            else:
-                return None
+            return None
 
     def getLengthDistribution(self, cave=None, tag=None, year=None, month=None):
         df = self.joint_df
         if cave is not None:
-            df = df[df["Location"] == "C%d" % cave]
+            df = df[df["Location"] == f"C{cave}"]
         if year is not None:
             df = df[df["year"] == year]
         if month is not None:
@@ -179,7 +177,7 @@ def _clean(joint_df):
 
     # Fix locations
     def locationFormatter(loc):
-        return "C%d" % loc if isinstance(loc, int) else loc.upper()
+        return f"C{loc if isinstance(loc, int) else loc.upper()}"
 
     joint_df = joint_df[joint_df["Location"].notnull()]
     joint_df["Location"] = joint_df["Location"].apply(locationFormatter)
