@@ -5,7 +5,7 @@ import pandas as pd
 
 
 class DateOrder(Enum):
-    YEAR_MONTH = (1,)
+    YEAR_MONTH = 1
     MONTH_YEAR = 2
 
 
