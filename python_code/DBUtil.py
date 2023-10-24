@@ -1,12 +1,17 @@
 import os
-import pandas as pd
 from enum import Enum
 
+import pandas as pd
+
+
 class DateOrder(Enum):
-    YEAR_MONTH = 1,
+    YEAR_MONTH = (1,)
     MONTH_YEAR = 2
-    
-def generate_dates(years, months, firstMonth = 0, lastMonth=1, order = DateOrder.YEAR_MONTH, sep = "_"):
+
+
+def generate_dates(
+    years, months, firstMonth=0, lastMonth=1, order=DateOrder.YEAR_MONTH, sep="_"
+):
     """Generate dates for the given years and months
 
     Args:
@@ -25,13 +30,26 @@ def generate_dates(years, months, firstMonth = 0, lastMonth=1, order = DateOrder
         for month in months:
             if year == years[0] and monthIdx < firstMonth:
                 pass
-            yield str(year) + sep + str(month) if order == DateOrder.YEAR_MONTH else str(month) + sep + str(year), year, monthIdx
-            
+            yield str(year) + sep + str(
+                month
+            ) if order == DateOrder.YEAR_MONTH else str(month) + sep + str(
+                year
+            ), year, monthIdx
+
             if year == years[-1] and monthIdx == lastMonth:
                 break
             monthIdx += 1
 
-def _dir_generator(caveNum, rootDirs=["../all_images/", "results"], years=range(2012, 2020), months=["June", "Aug"], firstMonth = 1, lastMonth=1, verbose = False):
+
+def _dir_generator(
+    caveNum,
+    rootDirs=None,
+    years=range(2012, 2020),
+    months=None,
+    firstMonth=1,
+    lastMonth=1,
+    verbose=False,
+):
     """Generates directory pths for the given parameters
 
     Args:
@@ -46,37 +64,82 @@ def _dir_generator(caveNum, rootDirs=["../all_images/", "results"], years=range(
     Yields:
         str: Directory paths for the specified dates
     """
+    if rootDirs is None:
+        rootDirs = ["../all_images/", "results"]
+    if months is None:
+        months = ["June", "Aug"]
     for rootDir in rootDirs:
-        for date, year, monthIdx in generate_dates(years = years, months = months, firstMonth=firstMonth, lastMonth=lastMonth):
-            directory = os.path.join(rootDir,date, "Cave" + str(caveNum))
+        for date, year, monthIdx in generate_dates(
+            years=years, months=months, firstMonth=firstMonth, lastMonth=lastMonth
+        ):
+            directory = os.path.join(rootDir, date, "Cave" + str(caveNum))
             if os.path.isdir(directory):
                 yield directory, str(caveNum), year, monthIdx
             elif verbose:
-                print("%s is not a directory" % directory)
-                
-                
+                print(f"{directory} is not a directory")
+
+
 def _assignToFish(images, fileKey, key, value):
     """Helper function to assign value to fish which may not exist"""
     if fileKey not in images:
-        images[fileKey] = {"img": None, "mask": None, "maskLabel": None, "spotsLabel": None, "spots": None, "spotsJson": None, "precomp": None, "precompAA": None}
+        images[fileKey] = {
+            "img": None,
+            "mask": None,
+            "maskLabel": None,
+            "spotsLabel": None,
+            "spots": None,
+            "spotsJson": None,
+            "precomp": None,
+            "precompAA": None,
+        }
     images[fileKey][key] = value
 
-def get_images(caveNum, rootDirs=["../all_images/", "results"], years=range(2012, 2020), months=["June", "Aug"], firstMonth = 0, lastMonth = 1, verbose = False):
-    """Creates database of images from directories
-    """
+
+def get_images(
+    caveNum,
+    rootDirs=None,
+    years=range(2012, 2020),
+    months=None,
+    firstMonth=0,
+    lastMonth=1,
+    verbose=False,
+):
+    """Creates database of images from directories"""
+    if rootDirs is None:
+        rootDirs = ["../all_images/", "results"]
+    if months is None:
+        months = ["June", "Aug"]
     images = {}
-    for directory, cave, year, monthIdx in _dir_generator(caveNum, rootDirs = rootDirs, years = years, months = months, firstMonth = firstMonth, lastMonth = lastMonth, verbose = verbose):
+    for directory, cave, year, monthIdx in _dir_generator(
+        caveNum,
+        rootDirs=rootDirs,
+        years=years,
+        months=months,
+        firstMonth=firstMonth,
+        lastMonth=lastMonth,
+        verbose=verbose,
+    ):
         for file in sorted(os.listdir(directory)):
             filePath = os.path.join(directory, file)
-            if os.path.isfile(filePath) and ('IMG' in file or 'DSC' in file) and (".xcf" not in file):
+            if (
+                os.path.isfile(filePath)
+                and ("IMG" in file or "DSC" in file)
+                and (".xcf" not in file)
+            ):
                 fileComponents = file.split(".")
-                fileKey = "C%s-%s-%s-%s" % (cave, str(year), months[monthIdx], fileComponents[0])
-                
+                fileKey = f"C{cave}-{str(year)}-{months[monthIdx]}-{fileComponents[0]}"
 
-                if len(fileComponents) == 2 and fileComponents[-1].lower() in ["jpg", "jpeg", "png", "bmp"]:
+                if len(fileComponents) == 2 and fileComponents[-1].lower() in [
+                    "jpg",
+                    "jpeg",
+                    "png",
+                    "bmp",
+                ]:
                     _assignToFish(images, fileKey, "img", filePath)
-                elif len(fileComponents) >= 2 and fileComponents[-1].lower() == "pickle":
-                    if len(fileComponents) >= 3 and fileComponents[1] == 'aa':
+                elif (
+                    len(fileComponents) >= 2 and fileComponents[-1].lower() == "pickle"
+                ):
+                    if len(fileComponents) >= 3 and fileComponents[1] == "aa":
                         _assignToFish(images, fileKey, "precompAA", filePath)
                     else:
                         _assignToFish(images, fileKey, "precomp", filePath)
@@ -85,33 +148,67 @@ def get_images(caveNum, rootDirs=["../all_images/", "results"], years=range(2012
                         _assignToFish(images, fileKey, "maskLabel", filePath)
                     else:
                         _assignToFish(images, fileKey, "mask", filePath)
-                elif len(fileComponents) >= 3 and fileComponents[2] == "spots" and fileComponents[-1] == "json":
+                elif (
+                    len(fileComponents) >= 3
+                    and fileComponents[2] == "spots"
+                    and fileComponents[-1] == "json"
+                ):
                     _assignToFish(images, fileKey, "spotsJson", filePath)
-                elif len(fileComponents) >= 3 and fileComponents[2] == "spots" or fileComponents[1] == "spots":
-                    if (len(fileComponents) >= 4 and fileComponents[3] == "acc") or fileComponents[2] == "acc":
+                elif (
+                    len(fileComponents) >= 3
+                    and fileComponents[2] == "spots"
+                    or fileComponents[1] == "spots"
+                ):
+                    if (
+                        len(fileComponents) >= 4 and fileComponents[3] == "acc"
+                    ) or fileComponents[2] == "acc":
                         _assignToFish(images, fileKey, "spotsLabel", filePath)
                     else:
                         _assignToFish(images, fileKey, "spots", filePath)
 
-                        
     return images
 
-def connectFish(caveNum, rootDirs=["../all_images/", "results"], years=range(2012, 2020), months=["June", "Aug"], tagTranslation = {}, firstMonth = 0, lastMonth=1, verbose = False):
-    """Connects fish based on csv files in the given directories
-    """
+
+def connectFish(
+    caveNum,
+    rootDirs=None,
+    years=range(2012, 2020),
+    months=None,
+    tagTranslation=None,
+    firstMonth=0,
+    lastMonth=1,
+    verbose=False,
+):
+    """Connects fish based on csv files in the given directories"""
+    if rootDirs is None:
+        rootDirs = ["../all_images/", "results"]
+    if months is None:
+        months = ["June", "Aug"]
+    if tagTranslation is None:
+        tagTranslation = {}
     fish = {}
     inverseMapping = {}
-    for directory, cave, year, monthIdx in _dir_generator(caveNum, rootDirs = rootDirs, years = years, months = months, firstMonth = firstMonth, lastMonth = lastMonth, verbose = verbose):
+    for directory, cave, year, monthIdx in _dir_generator(
+        caveNum,
+        rootDirs=rootDirs,
+        years=years,
+        months=months,
+        firstMonth=firstMonth,
+        lastMonth=lastMonth,
+        verbose=verbose,
+    ):
         metadataFound = False
         for file in os.listdir(directory):
             filePath = os.path.join(directory, file)
-            if os.path.isfile(filePath) and (file.startswith("filename") or file.startswith("newfilename")):
+            if os.path.isfile(filePath) and (
+                file.startswith("filename") or file.startswith("newfilename")
+            ):
                 df = None
-                if file.split(".")[-1].lower() == 'csv':
-                    df = pd.read_csv(filePath, delimiter = ';', quotechar="'")
-                elif file.split(".")[-1].lower() == 'xlsx':
+                if file.split(".")[-1].lower() == "csv":
+                    df = pd.read_csv(filePath, delimiter=";", quotechar="'")
+                elif file.split(".")[-1].lower() == "xlsx":
                     df = pd.read_excel(filePath, sheet_name="Sheet1")
-                
+
                 if df is not None:
                     if verbose:
                         print(filePath)
@@ -119,8 +216,11 @@ def connectFish(caveNum, rootDirs=["../all_images/", "results"], years=range(201
                         for index, row in df.iterrows():
                             tag = str(row["ID"])
                             if tag.lower() == "nan":
-                                if "comments" in row and str(row["comments"]).lower() != "nan":
-                                    tag = "c:%s" % str(row["comments"])
+                                if (
+                                    "comments" in row
+                                    and str(row["comments"]).lower() != "nan"
+                                ):
+                                    tag = f"c:{str(row['comments'])}"
                                 else:
                                     tag = None
                             if tagTranslation is not None and tag in tagTranslation:
@@ -128,30 +228,33 @@ def connectFish(caveNum, rootDirs=["../all_images/", "results"], years=range(201
 
                             if str(row["filename"]).lower() == "nan":
                                 if verbose:
-                                    print("Row %d in metadatafile %s does not list an image filename!" % (index, filePath))
+                                    print(
+                                        f"Row {index} in metadatafile {filePath} does not list an image filename!"
+                                    )
                             else:
-
-                                keyPath = "C%s-%s-%s-%s" % (cave, str(year), months[monthIdx], row["filename"].split(".")[0]) 
+                                keyPath = f"C{cave}-{str(year)}-{months[monthIdx]}-{row['filename'].split('.')[0]}"
                                 ## !!------------------ File entry in CSV file is wrong. Fix here as cannot modfiy source files --------------------!! ##
-                                if keyPath == 'C21-2017-Aug-IMG_3262':
-                                    keyPath = 'C21-2017-Aug-IMG_3263'
+                                if keyPath == "C21-2017-Aug-IMG_3262":
+                                    keyPath = "C21-2017-Aug-IMG_3263"
                                 ## !!------------------                            End of fix                                   --------------------!! ##
                                 inverseMapping[keyPath] = tag
                                 try:
                                     fish[tag].append(keyPath)
-                                except:
+                                except KeyError:
                                     fish[tag] = [keyPath]
                         metadataFound = True
-                    except Exception as e:
+                    # didn't write the code so not sure what exceptions this expects to be thrown
+                    # pylint: disable=broad-except
+                    except Exception:
                         if verbose:
-                            print("Error occured. Looking for different metadata file...")
+                            print(
+                                "Error occured. Looking for different metadata file..."
+                            )
                         metadataFound = False
                 if metadataFound:
                     break
-                    
-        if not metadataFound and verbose:
-            print("Cannot find metadata file for directory: %s" % directory)
-                
-                        
-    return fish, inverseMapping
 
+        if not metadataFound and verbose:
+            print(f"Cannot find metadata file for directory: {directory}")
+
+    return fish, inverseMapping

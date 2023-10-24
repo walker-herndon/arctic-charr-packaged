@@ -3,10 +3,11 @@ Matcher
 """
 
 import os
-import UnetExtractor
-from algorithms import Algorithm
+
 import astroalignMatch
 import grothMatcherCustom
+import UnetExtractor
+from algorithms import Algorithm
 
 
 def _translatePath(inPath):
@@ -208,11 +209,15 @@ class Matcher:
         results = {}
         # Run the correct algorithm
         if algorithm == Algorithm.CUSTOM_GROTH:
-            grothMatcherCustom.set_cache_dir(self.grothCache)
+            # grothMatcherCustom.set_cache_dir(self.grothCache)
             for key in query_imgs:
                 results[key] = []
                 result = grothMatcherCustom.findClosestMatch(
-                    key, inputDictionary[key], comparatorDictionary, local_triangle_k=25
+                    key,
+                    inputDictionary[key],
+                    comparatorDictionary,
+                    cache_dir=self.grothCache,
+                    local_triangle_k=25,
                 )
 
                 # Order results
@@ -228,11 +233,14 @@ class Matcher:
                         {"file_name": r[2], "ranking": rank + 1, "score": r[0]}
                     )
         else:
-            astroalignMatch.set_cache_dir(self.grothCache)
+            # astroalignMatch.set_cache_dir(self.grothCache)
             for key in query_imgs:
                 results[key] = []
                 result = astroalignMatch.findClosestMatch(
-                    key, inputDictionary[key], comparatorDictionary
+                    key,
+                    inputDictionary[key],
+                    comparatorDictionary,
+                    cache_dir=self.grothCache,
                 )
                 # Order results
                 orderedResult = sorted(result, key=lambda x: x[0], reverse=True)

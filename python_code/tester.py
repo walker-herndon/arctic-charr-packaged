@@ -1,34 +1,34 @@
-import util
-import DBUtil
-import grothMatcherCustom
-import astroalignMatch
-import os
-import time
 import json
 import sys
+import time
 from enum import Enum
+
+import astroalignMatch
+import DBUtil
+import grothMatcherCustom
+import numpy as np
+
 
 class Algorithm(Enum):
     RANSAC_AFFINE = 1
     MODIFIED_GROTH = 2
 
+
 class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        else:
-            return super(NpEncoder, self).default(obj)
-        
+    def default(self, o):
+        if isinstance(o, np.integer):
+            return int(o)
+        if isinstance(o, np.floating):
+            return float(o)
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        return super().default(o)
 
 
 cave = 21
 algorithm = Algorithm.RANSAC_AFFINE
 
-resultFilename = "results.%s.C%d.json" % ("aa" if algorithm == Algorithm.RANSAC_AFFINE else "customGroth", cave)
+resultFilename = f"results.{'aa' if algorithm == Algorithm.RANSAC_AFFINE else 'customGroth'}.C{cave}.json"
 print(resultFilename)
 
 
@@ -37,62 +37,99 @@ prevDir = [2012, "June"]
 currentDir = [2012, "Aug"]
 
 
-
 for i in range(15):
     print(currentDir, prevDir)
-    testingImages = DBUtil.get_images(cave, years=[currentDir[0]], months=[currentDir[1]], rootDirs=["../all_images/", "patched/results/"])
-    databaseImages = DBUtil.get_images(cave, years=range(2012, prevDir[0] + 1), lastMonth = 0 if prevDir[1] == "June" else 1, rootDirs=["../all_images/", "patched/results/"])
-    tagToFish, fishToTag = DBUtil.connectFish(cave, years=range(2012, currentDir[0] + 1), lastMonth = 0 if currentDir[1] == "June" else 1, rootDirs=["../all_images/", "patched/results/"])
+    testingImages = DBUtil.get_images(
+        cave,
+        years=[currentDir[0]],
+        months=[currentDir[1]],
+        rootDirs=["../all_images/", "patched/results/"],
+    )
+    databaseImages = DBUtil.get_images(
+        cave,
+        years=range(2012, prevDir[0] + 1),
+        lastMonth=0 if prevDir[1] == "June" else 1,
+        rootDirs=["../all_images/", "patched/results/"],
+    )
+    tagToFish, fishToTag = DBUtil.connectFish(
+        cave,
+        years=range(2012, currentDir[0] + 1),
+        lastMonth=0 if currentDir[1] == "June" else 1,
+        rootDirs=["../all_images/", "patched/results/"],
+    )
     totalDirectoryProcessingTime = 0
+    # pylint: disable=C0206, C0201
     for keyPath in testingImages.keys():
-        
         potentialMatches = tagToFish[fishToTag[keyPath]]
         potentialMatches.remove(keyPath)
-        print("Testing: " + str(keyPath) + " (" + str(fishToTag[keyPath]) + "), Potential matches in DB: " + str(potentialMatches))
+        print(
+            "Testing: "
+            + str(keyPath)
+            + " ("
+            + str(fishToTag[keyPath])
+            + "), Potential matches in DB: "
+            + str(potentialMatches)
+        )
         sys.stdout.flush()
         currentTime = time.time()
         results = None
         if algorithm == Algorithm.RANSAC_AFFINE:
-            results = astroalignMatch.findClosestMatch(keyPath, testingImages[keyPath], databaseImages, verbose = False, progress = False)
+            results = astroalignMatch.findClosestMatch(
+                keyPath,
+                testingImages[keyPath],
+                databaseImages,
+                verbose=False,
+                progress=False,
+            )
         elif algorithm == Algorithm.MODIFIED_GROTH:
-            results = grothMatcherCustom.findClosestMatch(keyPath, testingImages[keyPath], databaseImages, progress = False, local_triangle_k = 25) #Added local_triangle_k
+            results = grothMatcherCustom.findClosestMatch(
+                keyPath,
+                testingImages[keyPath],
+                databaseImages,
+                progress=False,
+                local_triangle_k=25,
+            )  # Added local_triangle_k
         else:
             print("Unrecognised algorithm")
-        
+
         elapsedTime = time.time() - currentTime
         totalDirectoryProcessingTime += elapsedTime
         results = [list(entry) for entry in results]
-        [entry.append(fishToTag[entry[-1]]) for entry in results]
-        
-#         order = sorted(results, key=lambda x: x[0], reverse = True)
+        # [entry.append(fishToTag[entry[-1]]) for entry in results]
 
-#         order = [(entry[0], entry[1], fishToTag[entry[1]]) for entry in order if entry[0] != 0]
-#         #order = [(entry[0], entry[1], fishToTag[entry[1]], entry[2]) for entry in order if entry[0] != 0]
+        #         order = sorted(results, key=lambda x: x[0], reverse = True)
+
+        #         order = [(entry[0], entry[1], fishToTag[entry[1]]) for entry in order if entry[0] != 0]
+        #         #order = [(entry[0], entry[1], fishToTag[entry[1]], entry[2]) for entry in order if entry[0] != 0]
         print(elapsedTime)
-#         print(order)
+        #         print(order)
         sys.stdout.flush()
         totalResults[keyPath] = {
             "tag": fishToTag[keyPath],
             "potentialMatches": potentialMatches,
-            "results": results
+            "results": results,
         }
-        
-        
-        with open(resultFilename, "w") as f:
+
+        with open(resultFilename, "w", encoding="utf-8") as f:
             json.dump(totalResults, f, cls=NpEncoder)
-        
-        
+
     averageDirectoryTime = totalDirectoryProcessingTime / len(testingImages)
-    print("Directory finished: ", currentDir[0], "/", currentDir[1], " ", totalDirectoryProcessingTime, averageDirectoryTime, len(databaseImages))
+    print(
+        "Directory finished: ",
+        currentDir[0],
+        "/",
+        currentDir[1],
+        " ",
+        totalDirectoryProcessingTime,
+        averageDirectoryTime,
+        len(databaseImages),
+    )
     sys.stdout.flush()
-    
+
     prevDir[0] = currentDir[0]
     prevDir[1] = currentDir[1]
-    
+
     currentDir[0] = currentDir[0] + 1 if currentDir[1] == "Aug" else currentDir[0]
     currentDir[1] = "June" if currentDir[1] == "Aug" else "Aug"
-    
-print("Finished")
-    
 
-        
+print("Finished")
