@@ -22,22 +22,23 @@ astroalign.PIXEL_TOL = 0.01
 __cache_dir__ = "aa_cache"
 
 
-def set_cache_dir(cache):
-    """Sets the cache
+# def set_cache_dir(cache):
+#     """Sets the cache
 
-    Args:
-        cache (str): The directory where to cache values sued for matching.
-    """
-    __cache_dir__ = cache
+#     Args:
+#         cache (str): The directory where to cache values sued for matching.
+#     """
+#     global __cache_dir__
+#     __cache_dir__ = cache
 
 
-def get_cache_dir():
-    """Sets the cache directory
+# def get_cache_dir():
+#     """Sets the cache directory
 
-    Returns:
-        str: The directory where the cache is stored
-    """
-    return __cache_dir__
+#     Returns:
+#         str: The directory where the cache is stored
+#     """
+#     return __cache_dir__
 
 
 def aamatch(
@@ -83,11 +84,13 @@ def aamatch(
             s_idx,
             t_idx,
         )
-    except Exception as e:
+    except TypeError:
+        return None, 0, 0, [], []
+    except ValueError:
         return None, 0, 0, [], []
 
 
-def retrieve_from_cache(imgKey):
+def retrieve_from_cache(imgKey, cache_dir):
     """Retrieves the precomputed values from cache if present
 
     Args:
@@ -96,8 +99,8 @@ def retrieve_from_cache(imgKey):
     Returns:
         Dict|None: The object stored in the cache for the key
     """
-    if os.path.isfile(os.path.join(get_cache_dir(), imgKey + ".aa.pickle")):
-        with open(os.path.join(get_cache_dir(), imgKey + ".aa.pickle"), "rb") as f:
+    if os.path.isfile(os.path.join(cache_dir, imgKey + ".aa.pickle")):
+        with open(os.path.join(cache_dir, imgKey + ".aa.pickle"), "rb") as f:
             precomputedModelValues = pickle.load(f)
         return precomputedModelValues
     else:
@@ -110,6 +113,7 @@ def open_cached(
     spotsJsonKey="spotsJson",
     maskImgKey="mask",
     precomputedPickle="precompAA",
+    cache_dir="aa_cache",
 ):
     """Attempts to open a cached version of precomputed values for the comparison. Computes these if necessarty and saves to cache.
 
@@ -128,7 +132,7 @@ def open_cached(
         with open(modelDict[precomputedPickle], "rb") as f:
             precomputedModelValues = pickle.load(f)
     else:
-        precomputedModelValues = retrieve_from_cache(imageKey)
+        precomputedModelValues = retrieve_from_cache(imageKey, cache_dir)
 
     if (
         precomputedModelValues is None
@@ -138,7 +142,11 @@ def open_cached(
         or precomputedModelValues["max_control_points"] != astroalign.MAX_CONTROL_POINTS
     ):
         precomputedModelValues = precomputeValues(
-            modelDict, imageKey, spotsJSONKey=spotsJsonKey, maskImgKey=maskImgKey
+            modelDict,
+            imageKey,
+            spotsJSONKey=spotsJsonKey,
+            maskImgKey=maskImgKey,
+            cache_dir=cache_dir,
         )
 
     return precomputedModelValues
@@ -150,6 +158,7 @@ def precomputeValues(
     spotsJSONKey="spotsJson",
     maskImgKey="mask",
     precomputedPickle="precompAA",
+    cache_dir="aa_cache",
 ):
     """Precomputes values necessary for comparison of the fish to another fish
 
@@ -165,7 +174,7 @@ def precomputeValues(
     """
     spots = None
     if fishDict[spotsJSONKey] is not None:
-        with open(fishDict[spotsJSONKey], "r") as f:
+        with open(fishDict[spotsJSONKey], "r", encoding="utf-8") as f:
             spots = np.asarray(json.load(f))
         if len(spots) > 5:
             spots = spots[:, :2]  # Remove size from spots
@@ -181,13 +190,11 @@ def precomputeValues(
             )
             spotsProcessed = tmpPoints / np.max(warpedTargetMask.nonzero())
 
-            invariants, asterisms = astroalign._generate_invariants(
+            invariants, asterisms = astroalign.generate_invariants(
                 spotsProcessed[: astroalign.MAX_CONTROL_POINTS]
             )
             kdTree = cKDTree(invariants)
-            fishDict[precomputedPickle] = os.path.join(
-                get_cache_dir(), imgKey + ".aa.pickle"
-            )
+            fishDict[precomputedPickle] = os.path.join(cache_dir, imgKey + ".aa.pickle")
             precomputedObject = {
                 "max_control_points": astroalign.MAX_CONTROL_POINTS,
                 "invariants": invariants,
@@ -198,7 +205,7 @@ def precomputeValues(
                 "nn": astroalign.NUM_NEAREST_NEIGHBORS,
                 "version": 1,
             }
-            with open(os.path.join(get_cache_dir(), imgKey + ".aa.pickle"), "wb") as f:
+            with open(os.path.join(cache_dir, imgKey + ".aa.pickle"), "wb") as f:
                 pickle.dump(precomputedObject, f)
             return precomputedObject
     return None
@@ -210,6 +217,7 @@ def findClosestMatch(
     imagesToComareDicts,
     spotsJsonKey="spotsJson",
     maskImgKey="mask",
+    cache_dir="aa_cache",
     verbose=False,
     progress=False,
 ):
@@ -228,7 +236,11 @@ def findClosestMatch(
         List[Tuple[float, float, str]]: List of tuples of (score, maskCoverage, image name) for each image the model image was compared to.
     """
     modelPrecompValues = open_cached(
-        modelDict, modelImageName, spotsJsonKey=spotsJsonKey, maskImgKey=maskImgKey
+        modelDict,
+        modelImageName,
+        spotsJsonKey=spotsJsonKey,
+        maskImgKey=maskImgKey,
+        cache_dir=cache_dir,
     )
     if modelPrecompValues is None:
         if verbose:
@@ -237,7 +249,7 @@ def findClosestMatch(
 
     centerTranslationMatrix = np.float32([[1, 0, 250], [0, 1, 250], [0, 0, 1]])
 
-    targetSpots = cv2.imread(modelDict["spots"], 0)
+    # targetSpots = cv2.imread(modelDict["spots"], 0)
     targetMask = crop_image(cv2.imread(modelDict[maskImgKey], 0))
     targetMaskShifted = cv2.warpPerspective(
         targetMask,
@@ -267,6 +279,7 @@ def findClosestMatch(
             imageKey,
             spotsJsonKey=spotsJsonKey,
             maskImgKey=maskImgKey,
+            cache_dir=cache_dir,
         )
 
         if dataPrecompValues is None:
@@ -282,7 +295,7 @@ def findClosestMatch(
                 figsize=(10, 10),
             )
 
-        T, num_points, score, s_idx, t_idx = aamatch(
+        T, _, score, s_idx, t_idx = aamatch(
             dataPrecompValues["spots_standardised"],
             modelPrecompValues["spots_standardised"],
             dataPrecompValues["invariants"],
@@ -294,7 +307,7 @@ def findClosestMatch(
         )
 
         maskCoverage = 0
-        spotsCoverage = 0
+        # spotsCoverage = 0
         if T is not None:
             if verbose:
                 transformedCoords = []
@@ -303,11 +316,11 @@ def findClosestMatch(
                     coordNew = T.params @ coordNew
                     transformedCoords.append(coordNew[:2])
 
-                maxValue = max(
-                    np.max(dataPrecompValues["spots_standardised"]),
-                    np.max(dataPrecompValues["spots_standardised"]),
-                    np.max(np.asarray(transformedCoords)),
-                )
+                # maxValue = max(
+                #     np.max(dataPrecompValues["spots_standardised"]),
+                #     np.max(dataPrecompValues["spots_standardised"]),
+                #     np.max(np.asarray(transformedCoords)),
+                # )
                 visualize(
                     dataPrecompValues["spots_standardised"],
                     dataPrecompValues["spots_standardised"],

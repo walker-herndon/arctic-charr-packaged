@@ -14,19 +14,25 @@ import numpy as np
 # cKDTree does not supoort
 # query ball
 from scipy.spatial import cKDTree, distance_matrix
-from util import *
+
+from util import (
+    visualize,
+    crop_image,
+    get_normalise_direction_matrix,
+)
 
 _logger = logging.getLogger("gmatch")
 
 __cache_dir__ = "groth_cache"
 
 
-def set_cache_dir(cache):
-    __cache_dir__ = cache
+# def set_cache_dir(cache):
+#     global __cache_dir__
+#     __cache_dir__ = cache
 
 
-def get_cache_dir():
-    return __cache_dir__
+# def get_cache_dir():
+#     return __cache_dir__
 
 
 def gmatch(
@@ -178,10 +184,12 @@ def gmatch_once(
     return (pm, matchedScore)
 
 
+# Not sure why these are passed but would be a lot to change so going to leave it
+# pylint: disable=unused-argument
 def match_quick(tl1, tl2, theta_max, reject_scale=10.0, model=None, data=None):
     tspace1 = None
     tspace2 = None
-    kdtree = None
+    # kdtree = None
     if model is None or data is None:
         tspace1 = np.array([[tl.R, tl.C, tl.theta] for tl in tl1])
         tspace2 = np.array([[tl.R, tl.C, tl.theta] for tl in tl2])
@@ -198,19 +206,19 @@ def match_quick(tl1, tl2, theta_max, reject_scale=10.0, model=None, data=None):
         kdtree2 = model["kdtree"]
 
     _logger.debug("query in tree...")
-    d1, r1 = kdtree2.query(tspace1, k=2)
-    d2, r2 = kdtree1.query(tspace2, k=2)
+    _, r1 = kdtree2.query(tspace1, k=2)
+    _, r2 = kdtree1.query(tspace2, k=2)
 
     _logger.debug("done")
 
-    dropOffCurve = d1[:, 0] / d1[:, 1]
-    idxs = np.argsort(dropOffCurve)
+    # dropOffCurve = d1[:, 0] / d1[:, 1]
+    # idxs = np.argsort(dropOffCurve)
 
     matches1 = []
     _logger.info("checking matches")
 
-    for i in range(len(r1)):
-        location = r1[i][0]
+    for i, r1val in enumerate(r1):
+        location = r1val[0]
         # triangle in first catalogue
         t1 = tl1[i]
         if location < len(r2) and i == r2[location][0]:
@@ -279,6 +287,8 @@ def votes(matches, c1, c2, allow_single_drop=False):
 
     sortv = np.argsort(vot, axis=None)
 
+    # This is beyond my ability to fix
+    # pylint: disable=unbalanced-tuple-unpacking
     id0, id1 = np.unravel_index(sortv[::-1], (c1, c2))
     matchedScore = 0
 
@@ -314,7 +324,7 @@ def clean_matches(matches):
     _logger.info("matches were %i", len(matches))
     magMean = magnitudes.mean()
     magStd = magnitudes.std()
-    magVar = magnitudes.var()
+    # magVar = magnitudes.var()
     newMatches = [m for m in matches if abs(m.logm - magMean) <= 1.5 * magStd]
     _logger.info("matches are %i", len(newMatches))
     return newMatches
@@ -330,13 +340,13 @@ def create_triang(vlist, reject_scale=10, c_max=0.99):
 def create_triang_local(vlist, reject_scale=10, c_max=0.99, k=10):
     kdTree = cKDTree(vlist)
     usedCombinations = set([])
-    for v in range(len(vlist)):
-        distances, indexes = kdTree.query(vlist[v], k=k)
+    for i, v in enumerate(vlist):
+        _, indexes = kdTree.query(v, k=k)
 
         indexes = indexes[1:]
         for idx in itertools.combinations(indexes, 2):
             id1, id2 = idx
-            idx = tuple(sorted([id1, id2, v]))
+            idx = tuple(sorted([id1, id2, i]))
             if idx not in usedCombinations and idx[2] < len(vlist):
                 usedCombinations.add(idx)
                 t = create_triang_(vlist, idx)
@@ -359,9 +369,9 @@ def create_triang_(vlist, idx):
     p = sum(n)
     ll = [(ni, ai, ids, (ids + 1) % 3) for ni, ai, ids in zip(n, a, range(3))]
     ls = sorted(ll, key=lambda x: x[0])
-    sides, edges, idxs, nidxs = zip(*ls)
+    sides, edges, _, _ = zip(*ls)
 
-    ov = v[idxs, :]
+    # ov = v[idxs, :]
     oa = np.array(edges)
 
     # cross product of sides
@@ -436,6 +446,7 @@ def findClosestMatch(
     spotsJsonKey="spotsJson",
     maskImgKey="mask",
     precomputedPickle="precomp",
+    cache_dir="groth_cache",
     verbose=False,
     progress=False,
     local_triangle_k=0,
@@ -450,9 +461,9 @@ def findClosestMatch(
             precomputedModelValues = pickle.load(f)
     else:
         # Try retrieving using local cache
-        precomputedModelValues = retrieve_from_cache(modelImageKey)
+        precomputedModelValues = retrieve_from_cache(modelImageKey, cache_dir)
     if (
-        precomputedModelValues == None
+        precomputedModelValues is None
         or precomputedModelValues["reject_scale"] != reject_scale
         or precomputedModelValues["c_max"] != c_max
         or "local_triangle_k" not in precomputedModelValues
@@ -465,12 +476,13 @@ def findClosestMatch(
             c_max,
             spotsJsonKey,
             maskImgKey,
+            cache_dir,
             local_triangle_k,
         )
     elif verbose:
         print("Cache hit")
 
-    if precomputedModelValues == None:
+    if precomputedModelValues is None:
         if progress or verbose:
             print("Not enough points")
         return []
@@ -495,7 +507,7 @@ def findClosestMatch(
             # Try retrieving using local cache
             precomputedFishValues = retrieve_from_cache(imageKey)
         if (
-            precomputedFishValues == None
+            precomputedFishValues is None
             or precomputedFishValues["reject_scale"] != reject_scale
             or precomputedFishValues["c_max"] != c_max
             or "local_triangle_k" not in precomputedFishValues
@@ -507,10 +519,11 @@ def findClosestMatch(
                 c_max,
                 spotsJsonKey,
                 maskImgKey,
+                cache_dir,
                 local_triangle_k,
             )
 
-        if precomputedFishValues == None:
+        if precomputedFishValues is None:
             if progress or verbose:
                 print("Not enough points")
             ranking.append((-1, -1, imageKey))
@@ -545,13 +558,12 @@ def findClosestMatch(
     return ranking
 
 
-def retrieve_from_cache(imgKey):
-    if os.path.isfile(os.path.join(get_cache_dir(), imgKey + ".pickle")):
-        with open(os.path.join(get_cache_dir(), imgKey + ".pickle"), "rb") as f:
+def retrieve_from_cache(imgKey, cache_dir="groth_cache"):
+    if os.path.isfile(os.path.join(cache_dir, imgKey + ".pickle")):
+        with open(os.path.join(cache_dir, imgKey + ".pickle"), "rb") as f:
             precomputedModelValues = pickle.load(f)
         return precomputedModelValues
-    else:
-        return None
+    return None
 
 
 def precomputeValues(
@@ -561,11 +573,12 @@ def precomputeValues(
     c_max,
     spotsJSONKey="spotsJson",
     maskImgKey="mask",
+    cache_dir="groth_cache",
     local_triangle_k=0,
 ):
     spots = None
     if fishDict[spotsJSONKey] is not None:
-        with open(fishDict[spotsJSONKey], "r") as f:
+        with open(fishDict[spotsJSONKey], "r", encoding="utf-8") as f:
             spots = np.asarray(json.load(f))
     if spots is not None and len(spots) > 5:
         spots = spots[:, :2]  # Remove size from spots
@@ -606,7 +619,7 @@ def precomputeValues(
             "local_triangle_k": local_triangle_k,
             "version": 1,
         }
-        with open(os.path.join(get_cache_dir(), imgKey + ".pickle"), "wb") as f:
+        with open(os.path.join(cache_dir, imgKey + ".pickle"), "wb") as f:
             pickle.dump(precomputedObject, f)
         return precomputedObject
     else:
