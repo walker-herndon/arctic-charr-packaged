@@ -1,5 +1,5 @@
 ## Re-identification of individuals from images using spot constellations; a case study in Arctic charr (Salvelinus alpinus)
-**Note: README is copy from original repository**
+**Note: README is copy from original repository (Copy by Walker Herndon)**
 
 Ignacy T. Dębicki, Elizabeth A. Mittell, Bjarni K. Kristjánsson, Camille A. Leblanc, Michael B. Morrissey, & Kasim Terzić
 
