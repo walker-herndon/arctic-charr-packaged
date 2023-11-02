@@ -1,5 +1,5 @@
 .vscode
 .venv
 all_images
-python_code/__pycache__
+*/__pycache__
 results.*

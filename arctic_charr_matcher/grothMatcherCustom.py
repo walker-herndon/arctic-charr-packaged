@@ -15,7 +15,7 @@ import numpy as np
 # query ball
 from scipy.spatial import cKDTree, distance_matrix
 
-from util import (
+from .util import (
     visualize,
     crop_image,
     get_normalise_direction_matrix,
@@ -24,15 +24,6 @@ from util import (
 _logger = logging.getLogger("gmatch")
 
 __cache_dir__ = "groth_cache"
-
-
-# def set_cache_dir(cache):
-#     global __cache_dir__
-#     __cache_dir__ = cache
-
-
-# def get_cache_dir():
-#     return __cache_dir__
 
 
 def gmatch(

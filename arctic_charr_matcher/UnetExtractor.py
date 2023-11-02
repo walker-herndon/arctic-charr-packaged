@@ -6,15 +6,17 @@ import os
 import cv2
 import numpy as np
 import tensorflow as tf
-from keras.callbacks import ModelCheckpoint
-from keras.optimizers import Adam
-from keras_unet.metrics import iou, iou_thresholded
+
+# from keras.callbacks import ModelCheckpoint
+# from keras.optimizers import Adam
+# from keras_unet.metrics import iou, iou_thresholded
 from keras_unet.models import custom_unet
 from keras_unet.utils import get_augmented
-from Patch import PatchedImage
 from PIL import Image
 from sklearn.model_selection import train_test_split
-from util import (
+
+from .Patch import PatchedImage
+from .util import (
     crop_to_bounds,
     expand2square,
     find_center_mask,
@@ -47,43 +49,43 @@ class UnetSpotExtractor:
         else:
             self.trained = False
 
-    def train(
-        self,
-        training_generator,
-        validation_generator=None,
-        epochs=100,
-        steps_per_epoch=50,
-        weights_save_file="unet_weights/unet_spots_{epoch:02d}.hdf5",
-        loss="binary_crossentropy",
-        metrics=None,
-        additionalCallbacks=None,
-    ):
-        if metrics is None:
-            metrics = ["accuracy", iou, iou_thresholded]
-        if additionalCallbacks is None:
-            additionalCallbacks = []
-        callbacks = additionalCallbacks
-        if weights_save_file is not None:
-            model_checkpoint = ModelCheckpoint(
-                weights_save_file, monitor="loss", verbose=1, save_best_only=True
-            )
-            callbacks.append(model_checkpoint)
+    # def train(
+    #     self,
+    #     training_generator,
+    #     validation_generator=None,
+    #     epochs=100,
+    #     steps_per_epoch=50,
+    #     weights_save_file="unet_weights/unet_spots_{epoch:02d}.hdf5",
+    #     loss="binary_crossentropy",
+    #     metrics=None,
+    #     additionalCallbacks=None,
+    # ):
+    #     if metrics is None:
+    #         metrics = ["accuracy", iou, iou_thresholded]
+    #     if additionalCallbacks is None:
+    #         additionalCallbacks = []
+    #     callbacks = additionalCallbacks
+    #     if weights_save_file is not None:
+    #         model_checkpoint = ModelCheckpoint(
+    #             weights_save_file, monitor="loss", verbose=1, save_best_only=True
+    #         )
+    #         callbacks.append(model_checkpoint)
 
-        deviceToUse = "/device:CPU:0"
-        if self.useGPU:
-            deviceToUse = "/device:GPU:0"
-        with tf.device(deviceToUse):
-            self.model.compile(optimizer=Adam(lr=1e-4), loss=loss, metrics=metrics)
-            history = self.model.fit_generator(
-                training_generator,
-                steps_per_epoch=steps_per_epoch,
-                epochs=epochs,
-                validation_data=validation_generator,
-                validation_steps=2,
-                callbacks=[model_checkpoint],
-            )
-            self.trained = True
-            return history
+    #     deviceToUse = "/device:CPU:0"
+    #     if self.useGPU:
+    #         deviceToUse = "/device:GPU:0"
+    #     with tf.device(deviceToUse):
+    #         self.model.compile(optimizer=Adam(lr=1e-4), loss=loss, metrics=metrics)
+    #         history = self.model.fit_generator(
+    #             training_generator,
+    #             steps_per_epoch=steps_per_epoch,
+    #             epochs=epochs,
+    #             validation_data=validation_generator,
+    #             validation_steps=2,
+    #             callbacks=[model_checkpoint],
+    #         )
+    #         self.trained = True
+    #         return history
 
     def loadWeights(self, weightFile):
         self.model.load_weights(weightFile)
@@ -537,47 +539,47 @@ class UnetMaskExtractor:
         else:
             self.trained = False
 
-    def train(
-        self,
-        training_generator,
-        validation_generator=None,
-        epochs=100,
-        steps_per_epoch=50,
-        weights_save_file="unet_weights/unet_mask_{epoch:02d}.hdf5",
-        loss="binary_crossentropy",
-        metrics=None,
-        additionalCallbacks=None,
-    ):
-        if metrics is None:
-            metrics = ["accuracy", iou, iou_thresholded]
-        if additionalCallbacks is None:
-            additionalCallbacks = []
-        if not self.trained:
-            callbacks = additionalCallbacks
-            if weights_save_file is not None:
-                model_checkpoint = ModelCheckpoint(
-                    weights_save_file, monitor="loss", verbose=1, save_best_only=True
-                )
-                callbacks.append(model_checkpoint)
+    # def train(
+    #     self,
+    #     training_generator,
+    #     validation_generator=None,
+    #     epochs=100,
+    #     steps_per_epoch=50,
+    #     weights_save_file="unet_weights/unet_mask_{epoch:02d}.hdf5",
+    #     loss="binary_crossentropy",
+    #     metrics=None,
+    #     additionalCallbacks=None,
+    # ):
+    #     if metrics is None:
+    #         metrics = ["accuracy", iou, iou_thresholded]
+    #     if additionalCallbacks is None:
+    #         additionalCallbacks = []
+    #     if not self.trained:
+    #         callbacks = additionalCallbacks
+    #         if weights_save_file is not None:
+    #             model_checkpoint = ModelCheckpoint(
+    #                 weights_save_file, monitor="loss", verbose=1, save_best_only=True
+    #             )
+    #             callbacks.append(model_checkpoint)
 
-            deviceToUse = "/device:CPU:0"
-            if self.useGPU:
-                deviceToUse = "/device:GPU:0"
-            with tf.device(deviceToUse):
-                self.model.compile(optimizer=Adam(lr=1e-4), loss=loss, metrics=metrics)
-                history = self.model.fit_generator(
-                    training_generator,
-                    steps_per_epoch=steps_per_epoch,
-                    epochs=epochs,
-                    validation_data=validation_generator,
-                    validation_steps=2,
-                    callbacks=callbacks,
-                )
-                self.trained = True
-                return history
-        else:
-            print("Model already trained")
-            return None
+    #         deviceToUse = "/device:CPU:0"
+    #         if self.useGPU:
+    #             deviceToUse = "/device:GPU:0"
+    #         with tf.device(deviceToUse):
+    #             self.model.compile(optimizer=Adam(lr=1e-4), loss=loss, metrics=metrics)
+    #             history = self.model.fit_generator(
+    #                 training_generator,
+    #                 steps_per_epoch=steps_per_epoch,
+    #                 epochs=epochs,
+    #                 validation_data=validation_generator,
+    #                 validation_steps=2,
+    #                 callbacks=callbacks,
+    #             )
+    #             self.trained = True
+    #             return history
+    #     else:
+    #         print("Model already trained")
+    #         return None
 
     def loadWeights(self, weightFile):
         self.model.load_weights(weightFile)

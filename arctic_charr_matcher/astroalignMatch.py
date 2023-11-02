@@ -2,16 +2,17 @@ import json
 import os
 import pickle
 
-import astroalign
 import cv2
 import numpy as np
 import skimage.transform
 from scipy.spatial import cKDTree
-from util import (
-    crop_image,
+
+from . import astroalign
+from .util import (
+    crop_image, 
     get_average_precision_recall,
-    get_normalise_direction_matrix,
-    visualize,
+    get_normalise_direction_matrix, 
+    visualize
 )
 
 astroalign.MAX_CONTROL_POINTS = 50
@@ -20,25 +21,6 @@ astroalign.NUM_NEAREST_NEIGHBORS = 15
 astroalign.PIXEL_TOL = 0.01
 
 __cache_dir__ = "aa_cache"
-
-
-# def set_cache_dir(cache):
-#     """Sets the cache
-
-#     Args:
-#         cache (str): The directory where to cache values sued for matching.
-#     """
-#     global __cache_dir__
-#     __cache_dir__ = cache
-
-
-# def get_cache_dir():
-#     """Sets the cache directory
-
-#     Returns:
-#         str: The directory where the cache is stored
-#     """
-#     return __cache_dir__
 
 
 def aamatch(

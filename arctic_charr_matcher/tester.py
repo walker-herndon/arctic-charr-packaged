@@ -3,10 +3,9 @@ import sys
 import time
 from enum import Enum
 
-import astroalignMatch
-import DBUtil
-import grothMatcherCustom
 import numpy as np
+
+from . import DBUtil, astroalignMatch, grothMatcherCustom
 
 
 class Algorithm(Enum):

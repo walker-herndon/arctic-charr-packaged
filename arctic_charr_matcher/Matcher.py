@@ -1,13 +1,7 @@
-"""
-Matcher
-"""
-
 import os
 
-import astroalignMatch
-import grothMatcherCustom
-import UnetExtractor
-from algorithms import Algorithm
+from . import UnetExtractor, astroalignMatch, grothMatcherCustom
+from .algorithms import Algorithm
 
 
 def _translatePath(inPath):
