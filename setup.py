@@ -5,7 +5,16 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        # list of required packages
+        "numpy",
+        "opencv-python-headless",
+        "tensorflow",
+        "keras",
+        "scikit-image",
+        "scikit-learn",
+        "scipy",
+        "pandas",
+        "xlrd",
+        "sep",
     ],
     entry_points={
         "console_scripts": [

@@ -4,3 +4,5 @@ all_images
 */__pycache__
 results.*
 arctic_charr_matcher.egg-info
+build
+dist

@@ -1,9 +1,10 @@
 from collections.abc import Iterable
 
-import DBUtil
 import numpy as np
 import pandas as pd
 from xlrd import XLRDError
+
+from . import DBUtil
 
 
 class LengthMatcher:
