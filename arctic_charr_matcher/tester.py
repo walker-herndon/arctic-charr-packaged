@@ -27,8 +27,8 @@ class NpEncoder(json.JSONEncoder):
 cave = 21
 algorithm = Algorithm.RANSAC_AFFINE
 
-resultFilename = f"results.{'aa' if algorithm == Algorithm.RANSAC_AFFINE else 'customGroth'}.C{cave}.json"
-print(resultFilename)
+resultFileName = f"results.{'aa' if algorithm == Algorithm.RANSAC_AFFINE else 'customGroth'}.C{cave}.json"
+print(resultFileName)
 
 
 totalResults = {}
@@ -94,13 +94,14 @@ for i in range(15):
         elapsedTime = time.time() - currentTime
         totalDirectoryProcessingTime += elapsedTime
         results = [list(entry) for entry in results]
+        # everything commented out is just used to get "order" value (not sure what it is) and print it
         # [entry.append(fishToTag[entry[-1]]) for entry in results]
 
         #         order = sorted(results, key=lambda x: x[0], reverse = True)
 
         #         order = [(entry[0], entry[1], fishToTag[entry[1]]) for entry in order if entry[0] != 0]
         #         #order = [(entry[0], entry[1], fishToTag[entry[1]], entry[2]) for entry in order if entry[0] != 0]
-        print(elapsedTime)
+        print(f"{round(elapsedTime, 2)} seconds to process matches")
         #         print(order)
         sys.stdout.flush()
         totalResults[keyPath] = {
@@ -109,7 +110,7 @@ for i in range(15):
             "results": results,
         }
 
-        with open(resultFilename, "w", encoding="utf-8") as f:
+        with open(resultFileName, "w", encoding="utf-8") as f:
             json.dump(totalResults, f, cls=NpEncoder)
 
     averageDirectoryTime = totalDirectoryProcessingTime / len(testingImages)

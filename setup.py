@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="arctic_charr_matcher",
     version="0.1.0",
-    packages=find_packages(),
+    packages=find_packages(include=["arctic_charr_matcher"]),
     install_requires=[
         "numpy",
         "opencv-python-headless",
@@ -16,11 +16,6 @@ setup(
         "xlrd",
         "sep",
     ],
-    entry_points={
-        "console_scripts": [
-            "my_script=my_package.script:main",
-        ],
-    },
     author="Walker Herndon",
     author_email="walker.herndon01@gmail.com",
     description="Arctic Charr matching algorithm",
