@@ -6,13 +6,7 @@ import os
 import cv2
 import numpy as np
 import tensorflow as tf
-
-# from keras.callbacks import ModelCheckpoint
-# from keras.optimizers import Adam
-# from keras_unet.metrics import iou, iou_thresholded
 from keras_unet.models import custom_unet
-
-# from keras_unet.utils import get_augmented
 from PIL import Image
 
 from .Patch import PatchedImage
@@ -23,8 +17,6 @@ from .util import (
     get_actual_img_bounds,
     read_PIL_image,
 )
-
-# from sklearn.model_selection import train_test_split
 
 
 class UnetSpotExtractor:
@@ -51,44 +43,6 @@ class UnetSpotExtractor:
         else:
             self.trained = False
 
-    # def train(
-    #     self,
-    #     training_generator,
-    #     validation_generator=None,
-    #     epochs=100,
-    #     steps_per_epoch=50,
-    #     weights_save_file="unet_weights/unet_spots_{epoch:02d}.hdf5",
-    #     loss="binary_crossentropy",
-    #     metrics=None,
-    #     additionalCallbacks=None,
-    # ):
-    #     if metrics is None:
-    #         metrics = ["accuracy", iou, iou_thresholded]
-    #     if additionalCallbacks is None:
-    #         additionalCallbacks = []
-    #     callbacks = additionalCallbacks
-    #     if weights_save_file is not None:
-    #         model_checkpoint = ModelCheckpoint(
-    #             weights_save_file, monitor="loss", verbose=1, save_best_only=True
-    #         )
-    #         callbacks.append(model_checkpoint)
-
-    #     deviceToUse = "/device:CPU:0"
-    #     if self.useGPU:
-    #         deviceToUse = "/device:GPU:0"
-    #     with tf.device(deviceToUse):
-    #         self.model.compile(optimizer=Adam(lr=1e-4), loss=loss, metrics=metrics)
-    #         history = self.model.fit_generator(
-    #             training_generator,
-    #             steps_per_epoch=steps_per_epoch,
-    #             epochs=epochs,
-    #             validation_data=validation_generator,
-    #             validation_steps=2,
-    #             callbacks=[model_checkpoint],
-    #         )
-    #         self.trained = True
-    #         return history
-
     def loadWeights(self, weightFile):
         self.model.load_weights(weightFile)
 
@@ -107,144 +61,6 @@ class UnetSpotExtractor:
         else:
             print("Model not trained")
             return images
-
-    # def createAugmentedGenerator(
-    #     self,
-    #     imgs,
-    #     labels,
-    #     data_gen_args=None,
-    #     validation_size=0.1,
-    #     seed_1=42,
-    #     seed_2=42,
-    #     seed_3=21,
-    #     batch_size_train=5,
-    #     batch_size_validate=5,
-    # ):
-    #     if data_gen_args is None:
-    #         data_gen_args = {
-    #             "rotation_range": 5,
-    #             "width_shift_range": 0.05,
-    #             "height_shift_range": 0.05,
-    #             "shear_range": 0.1,
-    #             "zoom_range": 0.2,
-    #             "horizontal_flip": True,
-    #             "vertical_flip": True,
-    #             "fill_mode": "constant",
-    #         }
-    #     trainX = imgs
-    #     trainY = labels
-    #     testX = None
-    #     testY = None
-    #     if validation_size > 0:
-    #         trainX, testX, trainY, testY = train_test_split(
-    #             imgs, labels, test_size=validation_size, random_state=seed_1
-    #         )
-
-    #     imageGenerator = get_augmented(
-    #         trainX,
-    #         trainY,
-    #         batch_size=batch_size_train,
-    #         data_gen_args=data_gen_args,
-    #         seed=seed_2,
-    #     )
-
-    #     if validation_size > 0:
-    #         if "channel_shift_range" in data_gen_args:
-    #             del data_gen_args["channel_shift_range"]
-
-    #         if "brightness_range" in data_gen_args:
-    #             del data_gen_args["brightness_range"]
-    #         validationImageGenerator = get_augmented(
-    #             testX,
-    #             testY,
-    #             batch_size=batch_size_validate,
-    #             data_gen_args=data_gen_args,
-    #             seed=seed_3,
-    #         )
-    #         return imageGenerator, validationImageGenerator, testX, testY
-
-    #     return imageGenerator
-
-    # Training input looks different from normal input
-    # def prepareTrainingInput(
-    #     self, imgs, annotations, masks, patchedImageMode=False, verbose=False
-    # ):
-    #     i = 0
-    #     imgs_list = []
-    #     annotations_list = []
-    #     for image, annotation, fishMask in zip(imgs, annotations, masks):
-    #         img = read_PIL_image(image)
-    #         # If input to model is grayscale, convert to grayscale
-    #         if self.inputShape[2] == 1:
-    #             img = img.convert("L")
-
-    #         fm = read_PIL_image(fishMask).convert("L")
-    #         maskBounds = get_actual_img_bounds(fm)
-
-    #         colorMode = "L" if self.inputShape[2] == 1 else "RGB"
-    #         img_masked = Image.new(colorMode, img.size)
-    #         img_masked.paste(img, mask=fm)
-    #         img_masked = crop_to_bounds(img_masked, maskBounds)
-
-    #         if patchedImageMode:
-    #             patchedImage = PatchedImage(
-    #                 (self.inputShape[0], self.inputShape[1]),
-    #                 min(self.inputShape[0], self.inputShape[1]) / 4,
-    #                 img_masked,
-    #             )
-    #             imgs_list.extend(patchedImage.asarray(fullArray=False))
-    #         else:
-    #             ratio = img_masked.size[1] / img_masked.size[0]
-    #             img_masked = expand2square(
-    #                 img_masked.resize(
-    #                     (self.inputShape[0], round(self.inputShape[0] * ratio))
-    #                 )
-    #             )
-    #             imgs_list.append(np.array(img_masked))
-
-    #         annotationImg = read_PIL_image(annotation).convert("L")
-    #         annot_masked = Image.new("L", annotationImg.size)
-    #         annot_masked.paste(annotationImg, mask=fm)
-    #         annot_masked = crop_to_bounds(annot_masked, maskBounds)
-    #         if patchedImageMode:
-    #             patchedImage = PatchedImage(
-    #                 (self.inputShape[0], self.inputShape[1]),
-    #                 min(self.inputShape[0], self.inputShape[1]) / 4,
-    #                 annot_masked,
-    #             )
-    #             annotations_list.extend(patchedImage.asarray(fullArray=False))
-    #         else:
-    #             annot_masked = expand2square(
-    #                 annot_masked.resize(
-    #                     (self.inputShape[0], round(self.inputShape[0] * ratio))
-    #                 )
-    #             )
-    #             annotations_list.append(np.array(annot_masked))
-    #         if verbose:
-    #             print(
-    #                 i,
-    #                 image,
-    #                 img_masked.size,
-    #                 annot_masked.size,
-    #                 img_masked.size[1] / img_masked.size[0],
-    #             )
-    #         i += 1
-    #     imgs_arr = np.asarray(imgs_list, dtype=np.float32) / 255
-    #     annotations_arr = np.asarray(annotations_list, dtype=np.float32) / 255
-    #     return (
-    #         imgs_arr.reshape(
-    #             imgs_arr.shape[0],
-    #             imgs_arr.shape[1],
-    #             imgs_arr.shape[2],
-    #             self.inputShape[2],
-    #         ),
-    #         annotations_arr.reshape(
-    #             annotations_arr.shape[0],
-    #             annotations_arr.shape[1],
-    #             annotations_arr.shape[2],
-    #             1,
-    #         ),
-    #     )
 
     def generate_spots(
         self,
@@ -541,48 +357,6 @@ class UnetMaskExtractor:
         else:
             self.trained = False
 
-    # def train(
-    #     self,
-    #     training_generator,
-    #     validation_generator=None,
-    #     epochs=100,
-    #     steps_per_epoch=50,
-    #     weights_save_file="unet_weights/unet_mask_{epoch:02d}.hdf5",
-    #     loss="binary_crossentropy",
-    #     metrics=None,
-    #     additionalCallbacks=None,
-    # ):
-    #     if metrics is None:
-    #         metrics = ["accuracy", iou, iou_thresholded]
-    #     if additionalCallbacks is None:
-    #         additionalCallbacks = []
-    #     if not self.trained:
-    #         callbacks = additionalCallbacks
-    #         if weights_save_file is not None:
-    #             model_checkpoint = ModelCheckpoint(
-    #                 weights_save_file, monitor="loss", verbose=1, save_best_only=True
-    #             )
-    #             callbacks.append(model_checkpoint)
-
-    #         deviceToUse = "/device:CPU:0"
-    #         if self.useGPU:
-    #             deviceToUse = "/device:GPU:0"
-    #         with tf.device(deviceToUse):
-    #             self.model.compile(optimizer=Adam(lr=1e-4), loss=loss, metrics=metrics)
-    #             history = self.model.fit_generator(
-    #                 training_generator,
-    #                 steps_per_epoch=steps_per_epoch,
-    #                 epochs=epochs,
-    #                 validation_data=validation_generator,
-    #                 validation_steps=2,
-    #                 callbacks=callbacks,
-    #             )
-    #             self.trained = True
-    #             return history
-    #     else:
-    #         print("Model already trained")
-    #         return None
-
     def loadWeights(self, weightFile):
         self.model.load_weights(weightFile)
 
@@ -653,64 +427,6 @@ class UnetMaskExtractor:
 
         return np.stack(dilated_images, axis=0)
 
-    # def createAugmentedGenerator(
-    #     self,
-    #     imgs,
-    #     labels,
-    #     data_gen_args=None,
-    #     validation_size=0.1,
-    #     seed_1=42,
-    #     seed_2=42,
-    #     seed_3=21,
-    #     batch_size_train=5,
-    #     batch_size_validate=5,
-    # ):
-    #     if data_gen_args is None:
-    #         data_gen_args = {
-    #             "rotation_range": 5,
-    #             "width_shift_range": 0.05,
-    #             "height_shift_range": 0.05,
-    #             "shear_range": 0.1,
-    #             "zoom_range": 0.2,
-    #             "horizontal_flip": True,
-    #             "vertical_flip": True,
-    #             "fill_mode": "constant",
-    #         }
-    #     trainX = imgs
-    #     trainY = labels
-    #     testX = None
-    #     testY = None
-    #     if validation_size > 0:
-    #         trainX, testX, trainY, testY = train_test_split(
-    #             imgs, labels, test_size=validation_size, random_state=seed_1
-    #         )
-
-    #     imageGenerator = get_augmented(
-    #         trainX,
-    #         trainY,
-    #         batch_size=batch_size_train,
-    #         data_gen_args=data_gen_args,
-    #         seed=seed_2,
-    #     )
-
-    #     if validation_size > 0:
-    #         if "channel_shift_range" in data_gen_args:
-    #             del data_gen_args["channel_shift_range"]
-
-    #         if "brightness_range" in data_gen_args:
-    #             del data_gen_args["brightness_range"]
-    #         print(data_gen_args)
-    #         validationImageGenerator = get_augmented(
-    #             testX,
-    #             testY,
-    #             batch_size=batch_size_validate,
-    #             data_gen_args=data_gen_args,
-    #             seed=seed_3,
-    #         )
-    #         return imageGenerator, validationImageGenerator, testX, testY
-
-    #     return imageGenerator
-
     def prepareInput(self, imgs, verbose=False):
         imgs_list = []
         i = 0
@@ -729,52 +445,6 @@ class UnetMaskExtractor:
             imgs_list.append(np.array(img))
             i += 1
         return imgs_list
-
-    # Training input looks different from normal input
-    # def prepareTrainingInput(self, imgs, annotations, verbose=False):
-    #     i = 0
-    #     imgs_list = []
-    #     annotations_list = []
-    #     for image, annotation in zip(imgs, annotations):
-    #         img = read_PIL_image(image)
-    #         # If input to model is grayscale, convert to grayscale
-    #         if self.inputShape[2] == 1:
-    #             img = img.convert("L")
-
-    #         ratio = img.size[1] / img.size[0]
-    #         if verbose:
-    #             print(img.size, ratio)
-    #         img = expand2square(
-    #             img.resize((self.inputShape[0], round(self.inputShape[0] * ratio)))
-    #         )
-    #         imgs_list.append(np.array(img))
-
-    #         annotationImg = read_PIL_image(annotation).convert("L")
-    #         annotationImg = expand2square(
-    #             annotationImg.resize(
-    #                 (self.inputShape[0], round(self.inputShape[0] * ratio))
-    #             )
-    #         )
-    #         annotations_list.append(np.array(annotationImg))
-    #         if verbose:
-    #             print(i, image, img.size, annotationImg.size, img.size[1] / img.size[0])
-    #         i += 1
-    #     imgs_arr = np.asarray(imgs_list, dtype=np.float32) / 255
-    #     annotations_arr = np.asarray(annotations_list, dtype=np.float32) / 255
-    #     return (
-    #         imgs_arr.reshape(
-    #             imgs_arr.shape[0],
-    #             imgs_arr.shape[1],
-    #             imgs_arr.shape[2],
-    #             self.inputShape[2],
-    #         ),
-    #         annotations_arr.reshape(
-    #             annotations_arr.shape[0],
-    #             annotations_arr.shape[1],
-    #             annotations_arr.shape[2],
-    #             1,
-    #         ),
-    #     )
 
     def generate_masks(
         self,
