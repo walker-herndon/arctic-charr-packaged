@@ -157,9 +157,9 @@ def precomputeValues(
     spots = None
     if fishDict[spotsJSONKey] is not None:
         with open(fishDict[spotsJSONKey], "r", encoding="utf-8") as f:
-            spots = np.asarray(json.load(f))
+            spots = json.load(f)
         if len(spots) > 5:
-            spots = spots[:, :2]  # Remove size from spots
+            spots = [n[:2] for n in spots]  # Remove size from spots
             mask = crop_image(cv2.imread(fishDict[maskImgKey], 0))
             R = get_normalise_direction_matrix(mask)
             tmpPoints = np.copy(np.asarray(spots))
