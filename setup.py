@@ -6,9 +6,11 @@ setup(
     packages=find_packages(include=["arctic_charr_matcher"]),
     install_requires=[
         "numpy",
+        "matplotlib",
         "opencv-python-headless",
         "tensorflow",
         "keras",
+        "keras-unet",
         "scikit-image",
         "scikit-learn",
         "scipy",
