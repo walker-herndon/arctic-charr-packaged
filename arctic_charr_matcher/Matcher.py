@@ -216,7 +216,7 @@ class Matcher:
                     comparatorDictionary,
                     cache_dir=self.grothCache,
                     local_triangle_k=25,
-                    verbose=verbose,
+                    progress=verbose,
                 )
 
                 # Order results
@@ -242,7 +242,7 @@ class Matcher:
                     inputDictionary[key],
                     comparatorDictionary,
                     cache_dir=self.grothCache,
-                    verbose=verbose,
+                    progress=verbose,
                 )
                 # Order results
                 orderedResult = sorted(result, key=lambda x: x[0], reverse=True)

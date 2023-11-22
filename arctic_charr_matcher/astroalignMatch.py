@@ -9,10 +9,10 @@ from scipy.spatial import cKDTree
 
 from . import astroalign
 from .util import (
-    crop_image, 
+    crop_image,
     get_average_precision_recall,
-    get_normalise_direction_matrix, 
-    visualize
+    get_normalise_direction_matrix,
+    visualize,
 )
 
 astroalign.MAX_CONTROL_POINTS = 50
@@ -328,7 +328,8 @@ def findClosestMatch(
 
             model = skimage.transform.AffineTransform()
             model.estimate(
-                dataPrecompValues["spots"][s_idx], modelPrecompValues["spots"][t_idx]
+                np.asarray(dataPrecompValues["spots"])[s_idx],
+                np.asarray(modelPrecompValues["spots"])[t_idx],
             )
             dataMask = crop_image(cv2.imread(comparatorImageDict[maskImgKey], 0))
 
