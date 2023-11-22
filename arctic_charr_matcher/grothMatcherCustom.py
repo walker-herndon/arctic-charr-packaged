@@ -478,11 +478,11 @@ def findClosestMatch(
             print("Not enough points")
         return []
 
-    if verbose:
-        visualize(
-            precomputedModelValues["standardisedSpots"],
-            precomputedModelValues["filteredSpots"],
-        )
+    # if verbose:
+    #     visualize(
+    #         precomputedModelValues["standardisedSpots"],
+    #         precomputedModelValues["filteredSpots"],
+    #     )
     ranking = []
     for imageKey in imagesToCompareDicts:
         if progress or verbose:
