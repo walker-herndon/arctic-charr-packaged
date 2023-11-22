@@ -144,12 +144,14 @@ class Matcher:
         matching_imgs,
         algorithm=Algorithm.CUSTOM_GROTH,
         rankingLimit=None,
+        verbose=False,
     ):
         """Matches a set of images against a second set of images.
         query_imgs    ([str]|str)            The image keys (or key) that are to be matched
         matching_imgs ([str]|str)            The image keys (or key) that are to be matched to
         algorithm     (algorithms.Algorithm) The matching algorithm to use
         rankingLimit  (int|None)             The max number of reuslts to return
+        verbose       (bool)                 If to print progress
 
         Returns dictionary of form:
         {str: [
@@ -167,9 +169,9 @@ class Matcher:
         all_imgs = query_imgs + matching_imgs
 
         # Check if any images need to have masks extracted
-        maskPaths = self.__ensureMasksExtracted(all_imgs)
+        maskPaths = self.__ensureMasksExtracted(all_imgs, verbose)
         # Check if any images need to have spots extracted
-        spotPaths, spotJsonPaths = self.__ensureSpotsExtracted(all_imgs)
+        spotPaths, spotJsonPaths = self.__ensureSpotsExtracted(all_imgs, verbose)
         # Construct dictionaries for each key
         inputDictionary = {}
 
@@ -205,6 +207,8 @@ class Matcher:
         if algorithm == Algorithm.CUSTOM_GROTH:
             # grothMatcherCustom.set_cache_dir(self.grothCache)
             for key in query_imgs:
+                if verbose:
+                    print(f"Matching {key}")
                 results[key] = []
                 result = grothMatcherCustom.findClosestMatch(
                     key,
@@ -212,6 +216,7 @@ class Matcher:
                     comparatorDictionary,
                     cache_dir=self.grothCache,
                     local_triangle_k=25,
+                    verbose=verbose,
                 )
 
                 # Order results
@@ -229,12 +234,15 @@ class Matcher:
         else:
             # astroalignMatch.set_cache_dir(self.grothCache)
             for key in query_imgs:
+                if verbose:
+                    print(f"Matching {key}")
                 results[key] = []
                 result = astroalignMatch.findClosestMatch(
                     key,
                     inputDictionary[key],
                     comparatorDictionary,
                     cache_dir=self.grothCache,
+                    verbose=verbose,
                 )
                 # Order results
                 orderedResult = sorted(result, key=lambda x: x[0], reverse=True)
@@ -248,9 +256,11 @@ class Matcher:
                         {"file_name": r[2], "ranking": rank + 1, "score": r[0]}
                     )
 
+        if verbose:
+            print("Matching complete")
         return results
 
-    def __ensureMasksExtracted(self, imgs):
+    def __ensureMasksExtracted(self, imgs, verbose):
         """Ensures all images assosciated with the given keys have extracted masks, extracting the masks where necessary
         imgs ([str]) List of images for which to make sure masks exist, extracting masks when no mask is present.
 
@@ -273,15 +283,18 @@ class Matcher:
             maskPaths.append(maskResultsPath + self.maskFileSuffix)
 
         if len(pathsToProcess) > 0:
+            if verbose:
+                print("Extracting masks")
             self.maskExtractor.generate_masks(
                 pathsToProcess,
                 batch_size=self.maskBatchSize,
                 outputDir=self.maskResultOutputDir,
+                verbose=verbose,
             )
 
         return maskPaths
 
-    def __ensureSpotsExtracted(self, imgs):
+    def __ensureSpotsExtracted(self, imgs, verbose):
         """Ensures all images assosciated with the given keys have extracted spots, extracting the spots where necessary
         imgs ([str]) List of images for which to make sure spots exist, extracting spots when no spot file is present.
 
@@ -317,11 +330,14 @@ class Matcher:
             spotJsonPaths.append(spotResultsPath + self.spotJsonFileSuffix)
 
         if len(imgPathsToProcess) > 0:
+            if verbose:
+                print("Extracting spots")
             self.spotExtractor.generate_spots(
                 imgPathsToProcess,
                 maskPathsToProcess,
                 batch_size=self.spotBatchSize,
                 threshold=self.spotThreshold,
                 outputDir=self.spotResultOutputDir,
+                verbose=verbose,
             )
         return spotPaths, spotJsonPaths
