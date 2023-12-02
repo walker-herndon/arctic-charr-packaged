@@ -175,6 +175,8 @@ def precomputeValues(
             invariants, asterisms = astroalign.generate_invariants(
                 spotsProcessed[: astroalign.MAX_CONTROL_POINTS]
             )
+            if np.isnan(invariants).any() or np.isinf(invariants).any():
+                return None
             kdTree = cKDTree(invariants)
             fishDict[precomputedPickle] = os.path.join(cache_dir, imgKey + ".aa.pickle")
             precomputedObject = {
