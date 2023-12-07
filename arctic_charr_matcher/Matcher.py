@@ -4,6 +4,23 @@ from . import UnetExtractor, astroalignMatch, grothMatcherCustom
 from .algorithms import Algorithm
 
 
+def _pathToKey(path):
+    """Default function for translating an image path to a key. Assumes path is of form
+    <image root>/<year>_<month>/Cave<#>/<image name>.JPG
+
+    path (str|Path) The path to translate
+
+    Returns: (str) key of form `C<#>-<year>-<month>-<image name>`
+    """
+    # Split into cave, year, month, img name
+    pathElements = path.split(os.sep)
+    cave = pathElements[-2][4:]
+    year = pathElements[-3].split("_")[0]
+    month = pathElements[-3].split("_")[1]
+    imgName = pathElements[-1].split(".")[0]
+    return f"C{cave}-{year}-{month}-{imgName}"
+
+
 def _translatePath(inPath):
     """Default function for translating an original image path to a result path for spots and masks. Creates intermediate folders if no such end folder exists.
     inPath (str|Path) The path to translate
@@ -241,7 +258,7 @@ class Matcher:
                     key,
                     inputDictionary[key],
                     comparatorDictionary,
-                    cache_dir=self.grothCache,
+                    cache_dir=self.astroalignCache,
                     progress=verbose,
                 )
                 # Order results
@@ -332,7 +349,7 @@ class Matcher:
         if len(imgPathsToProcess) > 0:
             if verbose:
                 print("Extracting spots")
-            self.spotExtractor.generate_spots(
+            self.spotExtractor.generate_spots_patched(
                 imgPathsToProcess,
                 maskPathsToProcess,
                 batch_size=self.spotBatchSize,

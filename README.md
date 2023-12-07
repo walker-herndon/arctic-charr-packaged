@@ -2,13 +2,29 @@
 
 Ignacy T. Dębicki, Elizabeth A. Mittell, Bjarni K. Kristjánsson, Camille A. Leblanc, Michael B. Morrissey, & Kasim Terzić
 
-This branch is for transforming the code into a python library.
+Modified by Walker Herndon to transform the code into a python library
 
 #### Instructions for installation
+
+You will need to have python and pip installed to use the library. You can check that these are installed by running `python —version` and `pip —version` in the terminal. Depending on how python was installed on your computer you might have to run `python3 —version` instead, and for any future python commands replace `python` with `python3`.
+
 1. Run `python setup.py bdist_wheel` to build the distribution file (stored in the `dist` directory).
-2. Create a virtual environment for working with the library and activate it.
+
+2. Create a virtual environment for working with the library and activate it. Further info on virtual environments is provided below if needed.
+
 3. Run `pip install /path/to/wheelfile.whl` which installs the library and all dependencies.
-4. Import as normal. To import the matcher for example, use `from arctic_charr_matcher.Matcher import Matcher` (imports `Matcher` class in `Matcher.py`).
+
+4. Import as normal. To import the matcher for example, use `from arctic_charr_matcher.Matcher import Matcher` (imports `Matcher` class in `Matcher.py`). This could be done in a normal python file, or a Jupyter Notebook file. Note that to use Jupyter Notebook you will need to install it in the virtual environment with `pip install notebook`, then run with `jupyter notebook` and select your virtual environment as the kernel to use within Jupyter.
+
+##### Virtual Environment Instructions
+Using virtual environments when working with Python is good practice as it keeps your dependencies separated between different programs.
+
+Comprehensive documentation of Python virtual environments, or “venv” can be found [here](https://docs.python.org/3/library/venv.html), but the basics are also provided below.
+
+1. To create a new virtual environment run `python -m venv /path/to/venv` where the path can be anywhere you’d like to store the virtual environment. Virtual environment directories are often named something like `.venv` (the dot at the start makes the folder hidden by default), but you can name it whatever you’d like.
+2. To use the venv, first activate it by running `source <venv>/bin/activate` where `<venv>` is the path to the venv given in step 1. This command assumes the shell you are using is bash or ash (bash is the default on Mac and Linux so if that doesn’t mean anything to you, you are almost definitely using bash). If you aren’t using bash or zsh the equivalent command for your shell can be found in the documentation linked above.
+3. Now that the venv is activated, when you install a library using `pip install <library>` it will be installed within the venv instead of globally. This is why virtual environments are good to keep your dependencies organized.
+4. To deactivate the virtual environment again, just run `deactivate`.
 
 #### Usage
 Start by importing the library

@@ -70,6 +70,8 @@ def aamatch(
         return None, 0, 0, [], []
     except ValueError:
         return None, 0, 0, [], []
+    except astroalign.MaxIterError:
+        return None, 0, 0, [], []
 
 
 def retrieve_from_cache(imgKey, cache_dir):
@@ -160,6 +162,11 @@ def precomputeValues(
             spots = json.load(f)
         if len(spots) > 5:
             spots = [n[:2] for n in spots]  # Remove size from spots
+            spots = [
+                spots[i]
+                for i in range(len(spots))
+                if i == 0 or spots[i] != spots[i - 1]
+            ]  # Remove duplicates
             mask = crop_image(cv2.imread(fishDict[maskImgKey], 0))
             R = get_normalise_direction_matrix(mask)
             tmpPoints = np.copy(np.asarray(spots))
@@ -289,6 +296,9 @@ def findClosestMatch(
             modelPrecompValues["asterisms"],
             modelPrecompValues["kdtree"],
         )
+
+        if progress or verbose:
+            print(f"Score: {score}")
 
         maskCoverage = 0
         # spotsCoverage = 0

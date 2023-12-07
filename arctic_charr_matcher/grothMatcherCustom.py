@@ -573,6 +573,9 @@ def precomputeValues(
             spots = json.load(f)
     if spots is not None and len(spots) > 5:
         spots = [n[:2] for n in spots]  # Remove size from spots
+        spots = [
+            spots[i] for i in range(len(spots)) if i == 0 or spots[i] != spots[i - 1]
+        ]  # Remove duplicates
 
         mask = crop_image(cv2.imread(fishDict[maskImgKey], 0))
         R = get_normalise_direction_matrix(mask)
