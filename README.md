@@ -45,7 +45,7 @@ matcher = Matcher(
 You'll need to supply the images to work with and the trained models.
 
 Here's what the file structure for the images needs to look like:
-%% Created with [tree.nathanfriend.io](https://tree.nathanfriend.io)%%
+<!-- Created with [tree.nathanfriend.io](https://tree.nathanfriend.io) -->
 
 ```
 └── images/
