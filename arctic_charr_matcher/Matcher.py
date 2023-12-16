@@ -193,7 +193,7 @@ class Matcher:
         inputDictionary = {}
 
         for i, query_img in enumerate(query_imgs):
-            # The precomp and precompAA are fields for custom cahce files outside of the normal ache directory. Just leave blank. Algorithms will check their cache anyway
+            # The precomp and precompAA are fields for custom cache files outside of the normal cache directory. Just leave blank. Algorithms will check their cache anyway
             # The label fields are left blank as they are only used for training. Also no labels exist
             inputDictionary[query_imgs[i]] = {
                 "img": self.keyToPathTranslator(query_img),
