@@ -2,6 +2,7 @@ import os
 
 from . import UnetExtractor, astroalignMatch, grothMatcherCustom
 from .algorithms import Algorithm
+from .fish import Fish
 
 
 def _pathToKey(path):
@@ -178,59 +179,29 @@ class Matcher:
         ]}
         """
         # Support both singular input and multiple input
-        if isinstance(query_imgs, str):
+        if isinstance(query_imgs, Fish):
             query_imgs = [query_imgs]
-        if isinstance(matching_imgs, str):
+        if isinstance(matching_imgs, Fish):
             matching_imgs = [matching_imgs]
 
-        all_imgs = query_imgs + matching_imgs
+        all_fish = query_imgs + matching_imgs
 
         # Check if any images need to have masks extracted
-        maskPaths = self.__ensureMasksExtracted(all_imgs, verbose)
+        self.__ensureMasksExtracted(all_fish, verbose)
         # Check if any images need to have spots extracted
-        spotPaths, spotJsonPaths = self.__ensureSpotsExtracted(all_imgs, verbose)
-        # Construct dictionaries for each key
-        inputDictionary = {}
-
-        for i, query_img in enumerate(query_imgs):
-            # The precomp and precompAA are fields for custom cache files outside of the normal cache directory. Just leave blank. Algorithms will check their cache anyway
-            # The label fields are left blank as they are only used for training. Also no labels exist
-            inputDictionary[query_imgs[i]] = {
-                "img": self.keyToPathTranslator(query_img),
-                "mask": maskPaths[i],
-                "maskLabel": None,
-                "spotsLabel": None,
-                "spots": spotPaths[i],
-                "spotsJson": spotJsonPaths[i],
-                "precomp": None,
-                "precompAA": None,
-            }
-
-        comparatorDictionary = {}
-        for i, matching_img in enumerate(matching_imgs):
-            comparatorDictionary[matching_imgs[i]] = {
-                "img": self.keyToPathTranslator(matching_img),
-                "mask": maskPaths[len(query_imgs) + i],
-                "maskLabel": None,
-                "spotsLabel": None,
-                "spots": spotPaths[len(query_imgs) + i],
-                "spotsJson": spotJsonPaths[len(query_imgs) + i],
-                "precomp": None,
-                "precompAA": None,
-            }
+        self.__ensureSpotsExtracted(all_fish, verbose)
 
         results = {}
         # Run the correct algorithm
         if algorithm == Algorithm.CUSTOM_GROTH:
             # grothMatcherCustom.set_cache_dir(self.grothCache)
-            for key in query_imgs:
+            for fish in query_imgs:
                 if verbose:
-                    print(f"Matching {key}")
-                results[key] = []
+                    print(f"Matching {fish}")
+                results[fish.uuid] = []
                 result = grothMatcherCustom.findClosestMatch(
-                    key,
-                    inputDictionary[key],
-                    comparatorDictionary,
+                    fish,
+                    matching_imgs,
                     cache_dir=self.grothCache,
                     local_triangle_k=25,
                     progress=verbose,
@@ -245,7 +216,7 @@ class Matcher:
                     limit = len(orderedResult)
                 for rank in range(min(limit, len(orderedResult))):
                     r = orderedResult[rank]
-                    results[key].append(
+                    results[fish.uuid].append(
                         {"file_name": r[2], "ranking": rank + 1, "score": r[0]}
                     )
         else:
@@ -277,27 +248,25 @@ class Matcher:
             print("Matching complete")
         return results
 
-    def __ensureMasksExtracted(self, imgs, verbose):
+    def __ensureMasksExtracted(self, fish_list, verbose):
         """Ensures all images assosciated with the given keys have extracted masks, extracting the masks where necessary
         imgs ([str]) List of images for which to make sure masks exist, extracting masks when no mask is present.
 
-        Returns: [str] of mask paths for each img in imgs
+        Mask paths can then be accessed by calling fish.mask_path.
         """
 
         pathsToProcess = []
-        maskPaths = []
-        for key in imgs:
-            imgPath = self.keyToPathTranslator(key)
-
-            if imgPath is None:
-                raise IOError(f"No image found for key {key}")
-            maskResultsPath = self.maskResultOutputDir(imgPath)
+        for fish in fish_list:
+            if fish.image_path is None:
+                raise IOError(f"No image found for fish \n{fish}")
+            if fish.mask_path is None:
+                maskResultsPath = self.maskResultOutputDir(fish.image_path)
+                fish.mask_path = maskResultsPath + self.maskFileSuffix
 
             if not os.path.isfile(
                 maskResultsPath + self.maskFileSuffix
             ):  # Check if file generated exists
-                pathsToProcess.append(imgPath)
-            maskPaths.append(maskResultsPath + self.maskFileSuffix)
+                pathsToProcess.append(fish.image_path)
 
         if len(pathsToProcess) > 0:
             if verbose:
@@ -309,42 +278,38 @@ class Matcher:
                 verbose=verbose,
             )
 
-        return maskPaths
-
-    def __ensureSpotsExtracted(self, imgs, verbose):
+    def __ensureSpotsExtracted(self, fish_list, verbose):
         """Ensures all images assosciated with the given keys have extracted spots, extracting the spots where necessary
         imgs ([str]) List of images for which to make sure spots exist, extracting spots when no spot file is present.
 
-        Returns: ([str], [str]) of spot paths and spot json paths for each img in imgs
+        Spot paths and spot json paths can then be accessed by calling fish.spot_path and fish.spotJson.
         """
         imgPathsToProcess = []
         maskPathsToProcess = []
-        spotPaths = []
-        spotJsonPaths = []
 
-        for key in imgs:
-            imgPath = self.keyToPathTranslator(key)
+        for fish in fish_list:
+            if fish.image_path is None:
+                raise IOError(f"No image found for fish {fish}")
 
-            if imgPath is None:
-                raise IOError("No image found for key {key}")
-            maskResultsPath = self.maskResultOutputDir(imgPath)
+            spotResultsPath = self.spotResultOutputDir(fish.image_path)
+            if fish.spot_path is None:
+                fish.spot_path = spotResultsPath + self.spotFileSuffix
+                fish.spotJson = spotResultsPath + self.spotJsonFileSuffix
+
+            maskResultsPath = self.maskResultOutputDir(fish.image_path)
 
             if not os.path.isfile(
                 maskResultsPath + self.maskFileSuffix
             ):  # Check if mask file exists
-                raise IOError("No mask found when generating spots for key {key}")
-
-            spotResultsPath = self.spotResultOutputDir(imgPath)
+                raise IOError(f"No mask found when generating spots for fish {fish}")
 
             if not os.path.isfile(
                 spotResultsPath + self.spotJsonFileSuffix
             ) or not os.path.isfile(
                 spotResultsPath + self.spotFileSuffix
             ):  # Check if spots file exists
-                imgPathsToProcess.append(imgPath)
-                maskPathsToProcess.append(maskResultsPath + self.maskFileSuffix)
-            spotPaths.append(spotResultsPath + self.spotFileSuffix)
-            spotJsonPaths.append(spotResultsPath + self.spotJsonFileSuffix)
+                imgPathsToProcess.append(fish.image_path)
+                maskPathsToProcess.append(fish.mask_path)
 
         if len(imgPathsToProcess) > 0:
             if verbose:
@@ -357,4 +322,3 @@ class Matcher:
                 outputDir=self.spotResultOutputDir,
                 verbose=verbose,
             )
-        return spotPaths, spotJsonPaths

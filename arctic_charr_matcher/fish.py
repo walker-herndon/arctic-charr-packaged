@@ -36,6 +36,11 @@ class Fish:
             return self.image_path == other.image_path
 
     @property
+    def uuid(self):
+        imgFile = self._image_path.split("/")[-1].split(".")[0]
+        return f"C{self._cave_number}-{self._year}-{self._month}-{imgFile}"
+
+    @property
     def image_path(self):
         return self._image_path
 
