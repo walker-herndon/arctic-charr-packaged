@@ -92,11 +92,7 @@ def retrieve_from_cache(imgKey, cache_dir):
 
 
 def open_cached(
-    modelDict,
-    imageKey,
-    spotsJsonKey="spotsJson",
-    maskImgKey="mask",
-    precomputedPickle="precompAA",
+    fish,
     cache_dir="aa_cache",
 ):
     """Attempts to open a cached version of precomputed values for the comparison. Computes these if necessarty and saves to cache.
@@ -112,11 +108,11 @@ def open_cached(
         dict: The dictionary of precomputed values
     """
     precomputedModelValues = None
-    if precomputedPickle in modelDict and modelDict[precomputedPickle] is not None:
-        with open(modelDict[precomputedPickle], "rb") as f:
+    if fish.precompAA is not None:
+        with open(fish.precompAA, "rb") as f:
             precomputedModelValues = pickle.load(f)
     else:
-        precomputedModelValues = retrieve_from_cache(imageKey, cache_dir)
+        precomputedModelValues = retrieve_from_cache(fish.uuid, cache_dir)
 
     if (
         precomputedModelValues is None
@@ -126,10 +122,7 @@ def open_cached(
         or precomputedModelValues["max_control_points"] != astroalign.MAX_CONTROL_POINTS
     ):
         precomputedModelValues = precomputeValues(
-            modelDict,
-            imageKey,
-            spotsJSONKey=spotsJsonKey,
-            maskImgKey=maskImgKey,
+            fish,
             cache_dir=cache_dir,
         )
 
@@ -137,11 +130,7 @@ def open_cached(
 
 
 def precomputeValues(
-    fishDict,
-    imgKey,
-    spotsJSONKey="spotsJson",
-    maskImgKey="mask",
-    precomputedPickle="precompAA",
+    fish,
     cache_dir="aa_cache",
 ):
     """Precomputes values necessary for comparison of the fish to another fish
@@ -157,8 +146,8 @@ def precomputeValues(
         [type]: [description]
     """
     spots = None
-    if fishDict[spotsJSONKey] is not None:
-        with open(fishDict[spotsJSONKey], "r", encoding="utf-8") as f:
+    if fish.spotJson is not None:
+        with open(fish.spotJson, "r", encoding="utf-8") as f:
             spots = json.load(f)
         if len(spots) > 5:
             spots = [n[:2] for n in spots]  # Remove size from spots
@@ -167,7 +156,7 @@ def precomputeValues(
                 for i in range(len(spots))
                 if i == 0 or spots[i] != spots[i - 1]
             ]  # Remove duplicates
-            mask = crop_image(cv2.imread(fishDict[maskImgKey], 0))
+            mask = crop_image(cv2.imread(fish.mask_path, 0))
             R = get_normalise_direction_matrix(mask)
             tmpPoints = np.copy(np.asarray(spots))
             tmpPoints = np.dot(
@@ -185,7 +174,7 @@ def precomputeValues(
             if np.isnan(invariants).any() or np.isinf(invariants).any():
                 return None
             kdTree = cKDTree(invariants)
-            fishDict[precomputedPickle] = os.path.join(cache_dir, imgKey + ".aa.pickle")
+            fish.precompAA = os.path.join(cache_dir, fish.uuid + ".aa.pickle")
             precomputedObject = {
                 "max_control_points": astroalign.MAX_CONTROL_POINTS,
                 "invariants": invariants,
@@ -196,18 +185,15 @@ def precomputeValues(
                 "nn": astroalign.NUM_NEAREST_NEIGHBORS,
                 "version": 1,
             }
-            with open(os.path.join(cache_dir, imgKey + ".aa.pickle"), "wb") as f:
+            with open(os.path.join(cache_dir, fish.uuid + ".aa.pickle"), "wb") as f:
                 pickle.dump(precomputedObject, f)
             return precomputedObject
     return None
 
 
 def findClosestMatch(
-    modelImageName,
-    modelDict,
-    imagesToComareDicts,
-    spotsJsonKey="spotsJson",
-    maskImgKey="mask",
+    query_fish,
+    fishToComare,
     cache_dir="aa_cache",
     verbose=False,
     progress=False,
@@ -227,10 +213,7 @@ def findClosestMatch(
         List[Tuple[float, float, str]]: List of tuples of (score, maskCoverage, image name) for each image the model image was compared to.
     """
     modelPrecompValues = open_cached(
-        modelDict,
-        modelImageName,
-        spotsJsonKey=spotsJsonKey,
-        maskImgKey=maskImgKey,
+        query_fish,
         cache_dir=cache_dir,
     )
     if modelPrecompValues is None:
@@ -241,7 +224,7 @@ def findClosestMatch(
     centerTranslationMatrix = np.float32([[1, 0, 250], [0, 1, 250], [0, 0, 1]])
 
     # targetSpots = cv2.imread(modelDict["spots"], 0)
-    targetMask = crop_image(cv2.imread(modelDict[maskImgKey], 0))
+    targetMask = crop_image(cv2.imread(query_fish.mask_path, 0))
     targetMaskShifted = cv2.warpPerspective(
         targetMask,
         centerTranslationMatrix,
@@ -249,7 +232,7 @@ def findClosestMatch(
     )
 
     if verbose:
-        print(modelImageName)
+        print(query_fish.uuid)
         visualize(
             modelPrecompValues["spots_standardised"],
             modelPrecompValues["spots_standardised"],
@@ -259,22 +242,17 @@ def findClosestMatch(
         )
 
     ranking = []
-    for imageKey in imagesToComareDicts:
+    for fish in fishToComare:
         if progress or verbose:
-            print(imageKey)
-
-        comparatorImageDict = imagesToComareDicts[imageKey]
+            print(fish.uuid)
 
         dataPrecompValues = open_cached(
-            comparatorImageDict,
-            imageKey,
-            spotsJsonKey=spotsJsonKey,
-            maskImgKey=maskImgKey,
+            fish,
             cache_dir=cache_dir,
         )
 
         if dataPrecompValues is None:
-            ranking.append((-1, 0, imageKey))
+            ranking.append((-1, 0, fish.uuid))
             continue
 
         if verbose:
@@ -343,7 +321,7 @@ def findClosestMatch(
                 np.asarray(dataPrecompValues["spots"])[s_idx],
                 np.asarray(modelPrecompValues["spots"])[t_idx],
             )
-            dataMask = crop_image(cv2.imread(comparatorImageDict[maskImgKey], 0))
+            dataMask = crop_image(cv2.imread(fish.mask_path, 0))
 
             warped = cv2.warpPerspective(
                 dataMask,
@@ -356,5 +334,5 @@ def findClosestMatch(
             )
             maskCoverage = 2 * (pMask * rMask) / (pMask + rMask)
 
-        ranking.append((score * maskCoverage, maskCoverage, imageKey))
+        ranking.append((score * maskCoverage, maskCoverage, fish.uuid))
     return ranking

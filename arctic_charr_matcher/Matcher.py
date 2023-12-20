@@ -197,7 +197,7 @@ class Matcher:
             # grothMatcherCustom.set_cache_dir(self.grothCache)
             for fish in query_imgs:
                 if verbose:
-                    print(f"Matching {fish}")
+                    print(f"Matching {fish.uuid}")
                 results[fish.uuid] = []
                 result = grothMatcherCustom.findClosestMatch(
                     fish,
@@ -221,14 +221,13 @@ class Matcher:
                     )
         else:
             # astroalignMatch.set_cache_dir(self.grothCache)
-            for key in query_imgs:
+            for fish in query_imgs:
                 if verbose:
-                    print(f"Matching {key}")
-                results[key] = []
+                    print(f"Matching {fish.uuid}")
+                results[fish.uuid] = []
                 result = astroalignMatch.findClosestMatch(
-                    key,
-                    inputDictionary[key],
-                    comparatorDictionary,
+                    fish,
+                    matching_imgs,
                     cache_dir=self.astroalignCache,
                     progress=verbose,
                 )
@@ -240,7 +239,7 @@ class Matcher:
                     limit = len(orderedResult)
                 for rank in range(min(limit, len(orderedResult))):
                     r = orderedResult[rank]
-                    results[key].append(
+                    results[fish.uuid].append(
                         {"file_name": r[2], "ranking": rank + 1, "score": r[0]}
                     )
 
