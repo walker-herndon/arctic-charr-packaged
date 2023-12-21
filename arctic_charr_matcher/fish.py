@@ -1,10 +1,11 @@
 class Fish:
     def __init__(
         self,
-        image_path,
+        file_name,
         cave_number,
         month,
         year,
+        image_path=None,
         mask_path=None,
         spot_path=None,
         maskLabel=None,
@@ -13,10 +14,11 @@ class Fish:
         precomp=None,
         precompAA=None,
     ):
-        self._image_path = image_path
+        self._file_name = file_name
         self._cave_number = cave_number
         self._month = month
         self._year = year
+        self._image_path = image_path
         self._mask_path = mask_path
         self._spot_path = spot_path
         self._maskLabel = maskLabel
@@ -37,16 +39,15 @@ class Fish:
 
     @property
     def uuid(self):
-        imgFile = self._image_path.split("/")[-1].split(".")[0]
-        return f"C{self._cave_number}-{self._year}-{self._month}-{imgFile}"
+        return f"C{self._cave_number}-{self._year}-{self._month}-{self._file_name}"
 
     @property
-    def image_path(self):
-        return self._image_path
+    def file_name(self):
+        return self._file_name
 
-    @image_path.setter
-    def image_path(self, image_path):
-        self._image_path = image_path
+    @file_name.setter
+    def file_name(self, file_name):
+        self._file_name = file_name
 
     @property
     def cave_number(self):
@@ -71,6 +72,14 @@ class Fish:
     @year.setter
     def year(self, year):
         self._year = year
+
+    @property
+    def image_path(self):
+        return self._image_path
+
+    @image_path.setter
+    def image_path(self, image_path):
+        self._image_path = image_path
 
     @property
     def mask_path(self):

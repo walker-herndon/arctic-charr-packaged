@@ -2,6 +2,7 @@ import os
 from enum import Enum
 
 import pandas as pd
+from .fish import Fish
 
 
 class DateOrder(Enum):
@@ -79,20 +80,12 @@ def _dir_generator(
                 print(f"{directory} is not a directory")
 
 
-def _assignToFish(images, fileKey, key, value):
+def _assignToFish(images, cave, month, year, fileName, attribute, value):
     """Helper function to assign value to fish which may not exist"""
+    fileKey = f"C{cave}-{str(year)}-{month}-{fileName}"
     if fileKey not in images:
-        images[fileKey] = {
-            "img": None,
-            "mask": None,
-            "maskLabel": None,
-            "spotsLabel": None,
-            "spots": None,
-            "spotsJson": None,
-            "precomp": None,
-            "precompAA": None,
-        }
-    images[fileKey][key] = value
+        images[fileKey] = Fish(fileName, cave, month, year)
+    setattr(images[fileKey], attribute, value)
 
 
 def get_images(
@@ -127,7 +120,8 @@ def get_images(
                 and (".xcf" not in file)
             ):
                 fileComponents = file.split(".")
-                fileKey = f"C{cave}-{str(year)}-{months[monthIdx]}-{fileComponents[0]}"
+                fileName = fileComponents[0]
+                month = months[monthIdx]
 
                 if len(fileComponents) == 2 and fileComponents[-1].lower() in [
                     "jpg",
@@ -135,25 +129,37 @@ def get_images(
                     "png",
                     "bmp",
                 ]:
-                    _assignToFish(images, fileKey, "img", filePath)
+                    _assignToFish(
+                        images, cave, month, year, fileName, "image_path", filePath
+                    )
                 elif (
                     len(fileComponents) >= 2 and fileComponents[-1].lower() == "pickle"
                 ):
                     if len(fileComponents) >= 3 and fileComponents[1] == "aa":
-                        _assignToFish(images, fileKey, "precompAA", filePath)
+                        _assignToFish(
+                            images, cave, month, year, fileName, "precompAA", filePath
+                        )
                     else:
-                        _assignToFish(images, fileKey, "precomp", filePath)
+                        _assignToFish(
+                            images, cave, month, year, fileName, "precomp", filePath
+                        )
                 elif len(fileComponents) >= 3 and fileComponents[2] == "mask":
                     if len(fileComponents) >= 4 and fileComponents[3] == "acc":
-                        _assignToFish(images, fileKey, "maskLabel", filePath)
+                        _assignToFish(
+                            images, cave, month, year, fileName, "maskLabel", filePath
+                        )
                     else:
-                        _assignToFish(images, fileKey, "mask", filePath)
+                        _assignToFish(
+                            images, cave, month, year, fileName, "mask_path", filePath
+                        )
                 elif (
                     len(fileComponents) >= 3
                     and fileComponents[2] == "spots"
                     and fileComponents[-1] == "json"
                 ):
-                    _assignToFish(images, fileKey, "spotsJson", filePath)
+                    _assignToFish(
+                        images, cave, month, year, fileName, "spotsJson", filePath
+                    )
                 elif (
                     len(fileComponents) >= 3
                     and fileComponents[2] == "spots"
@@ -162,9 +168,13 @@ def get_images(
                     if (
                         len(fileComponents) >= 4 and fileComponents[3] == "acc"
                     ) or fileComponents[2] == "acc":
-                        _assignToFish(images, fileKey, "spotsLabel", filePath)
+                        _assignToFish(
+                            images, cave, month, year, fileName, "spotsLabel", filePath
+                        )
                     else:
-                        _assignToFish(images, fileKey, "spots", filePath)
+                        _assignToFish(
+                            images, cave, month, year, fileName, "spot_path", filePath
+                        )
 
     return images
 

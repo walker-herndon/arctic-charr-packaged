@@ -5,7 +5,7 @@ from .algorithms import Algorithm
 from .fish import Fish
 
 
-def _pathToKey(path):
+def _pathToKey(path: str):
     """Default function for translating an image path to a key. Assumes path is of form
     <image root>/<year>_<month>/Cave<#>/<image name>.JPG
 
