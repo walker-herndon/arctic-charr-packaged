@@ -80,12 +80,11 @@ def _dir_generator(
                 print(f"{directory} is not a directory")
 
 
-def _assignToFish(images, cave, month, year, fileName, attribute, value):
+def _assignToFish(images, uuid, fileName, attribute, value):
     """Helper function to assign value to fish which may not exist"""
-    fileKey = f"C{cave}-{str(year)}-{month}-{fileName}"
-    if fileKey not in images:
-        images[fileKey] = Fish(fileName, cave, month, year)
-    setattr(images[fileKey], attribute, value)
+    if uuid not in images:
+        images[uuid] = Fish(fileName, uuid=uuid)
+    setattr(images[uuid], attribute, value)
 
 
 def get_images(
@@ -122,6 +121,7 @@ def get_images(
                 fileComponents = file.split(".")
                 fileName = fileComponents[0]
                 month = months[monthIdx]
+                uuid = f"Cave{cave}-{str(year)}-{month}-{fileName}"
 
                 if len(fileComponents) == 2 and fileComponents[-1].lower() in [
                     "jpg",
@@ -129,37 +129,25 @@ def get_images(
                     "png",
                     "bmp",
                 ]:
-                    _assignToFish(
-                        images, cave, month, year, fileName, "image_path", filePath
-                    )
+                    _assignToFish(images, uuid, fileName, "image_path", filePath)
                 elif (
                     len(fileComponents) >= 2 and fileComponents[-1].lower() == "pickle"
                 ):
                     if len(fileComponents) >= 3 and fileComponents[1] == "aa":
-                        _assignToFish(
-                            images, cave, month, year, fileName, "precompAA", filePath
-                        )
+                        _assignToFish(images, uuid, fileName, "precompAA", filePath)
                     else:
-                        _assignToFish(
-                            images, cave, month, year, fileName, "precomp", filePath
-                        )
+                        _assignToFish(images, uuid, fileName, "precomp", filePath)
                 elif len(fileComponents) >= 3 and fileComponents[2] == "mask":
                     if len(fileComponents) >= 4 and fileComponents[3] == "acc":
-                        _assignToFish(
-                            images, cave, month, year, fileName, "maskLabel", filePath
-                        )
+                        _assignToFish(images, uuid, fileName, "maskLabel", filePath)
                     else:
-                        _assignToFish(
-                            images, cave, month, year, fileName, "mask_path", filePath
-                        )
+                        _assignToFish(images, uuid, fileName, "mask_path", filePath)
                 elif (
                     len(fileComponents) >= 3
                     and fileComponents[2] == "spots"
                     and fileComponents[-1] == "json"
                 ):
-                    _assignToFish(
-                        images, cave, month, year, fileName, "spotsJson", filePath
-                    )
+                    _assignToFish(images, uuid, fileName, "spotsJson", filePath)
                 elif (
                     len(fileComponents) >= 3
                     and fileComponents[2] == "spots"
@@ -168,13 +156,74 @@ def get_images(
                     if (
                         len(fileComponents) >= 4 and fileComponents[3] == "acc"
                     ) or fileComponents[2] == "acc":
-                        _assignToFish(
-                            images, cave, month, year, fileName, "spotsLabel", filePath
-                        )
+                        _assignToFish(images, uuid, fileName, "spotsLabel", filePath)
                     else:
-                        _assignToFish(
-                            images, cave, month, year, fileName, "spot_path", filePath
-                        )
+                        _assignToFish(images, uuid, fileName, "spot_path", filePath)
+
+    return images
+
+
+def get_unsorted_fish(rootDirs=None, verbose=False):
+    # Same as get_fish(), but doesn't assume images are sorted by cave, year, and month
+    # uses different assignment function and uses path as uuid instead of filename
+    # theoretically, this should work the same as get_fish() if the images are sorted and get_images() can be removed
+    if rootDirs is None:
+        rootDirs = ["../all_images/", "results"]
+    images = {}
+    for rootDir in rootDirs:
+        for directory, _, _ in os.walk(rootDir):
+            files = os.listdir(directory)
+            if verbose and len(files) > 0:
+                print(f"Processing {len(files)} files in {directory}")
+            for file in sorted(os.listdir(directory)):
+                filePath = os.path.join(directory, file)
+                if (
+                    os.path.isfile(filePath)
+                    and ("IMG" in file or "DSC" in file)
+                    and (".xcf" not in file)
+                ):
+                    fileComponents = file.split(".")
+                    uuid = directory.replace(rootDir, "").replace("/", "-") + "-" + fileComponents[0]
+
+                    if len(fileComponents) == 2 and fileComponents[-1].lower() in [
+                        "jpg",
+                        "jpeg",
+                        "png",
+                        "bmp",
+                    ]:
+                        _assignToFish(images, uuid, filePath, "image_path", filePath)
+                    elif (
+                        len(fileComponents) >= 2
+                        and fileComponents[-1].lower() == "pickle"
+                    ):
+                        if len(fileComponents) >= 3 and fileComponents[1] == "aa":
+                            _assignToFish(images, uuid, filePath, "precompAA", filePath)
+                        else:
+                            _assignToFish(images, uuid, filePath, "precomp", filePath)
+                    elif len(fileComponents) >= 3 and fileComponents[2] == "mask":
+                        if len(fileComponents) >= 4 and fileComponents[3] == "acc":
+                            _assignToFish(images, uuid, filePath, "maskLabel", filePath)
+                        else:
+                            _assignToFish(images, uuid, filePath, "mask_path", filePath)
+                    elif (
+                        len(fileComponents) >= 3
+                        and fileComponents[2] == "spots"
+                        and fileComponents[-1] == "json"
+                    ):
+                        _assignToFish(images, uuid, filePath, "spotsJson", filePath)
+                    elif (
+                        len(fileComponents) >= 3
+                        and fileComponents[2] == "spots"
+                        or fileComponents[1] == "spots"
+                    ):
+                        if (
+                            len(fileComponents) >= 4 and fileComponents[3] == "acc"
+                        ) or fileComponents[2] == "acc":
+                            _assignToFish(
+                                images, uuid, filePath, "spotsLabel", filePath
+                            )
+                        else:
+                            _assignToFish(images, uuid, filePath, "spot_path", filePath)
 
     return images
 

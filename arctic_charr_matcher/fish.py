@@ -2,9 +2,10 @@ class Fish:
     def __init__(
         self,
         file_name,
-        cave_number,
-        month,
-        year,
+        cave_number=None,
+        month=None,
+        year=None,
+        uuid=None,
         image_path=None,
         mask_path=None,
         spot_path=None,
@@ -18,6 +19,16 @@ class Fish:
         self._cave_number = cave_number
         self._month = month
         self._year = year
+        if uuid is None:
+            if cave_number is None:
+                raise ValueError("Cave number must be set if uuid is not set")
+            if year is None:
+                raise ValueError("Year must be set if uuid is not set")
+            if month is None:
+                raise ValueError("Month must be set if uuid is not set")
+            self._uuid = f"C{cave_number}-{year}-{month}-{file_name}"
+        else:
+            self._uuid = uuid
         self._image_path = image_path
         self._mask_path = mask_path
         self._spot_path = spot_path
