@@ -163,15 +163,19 @@ def get_images(
     return images
 
 
-def get_unsorted_fish(rootDirs=None, verbose=False):
-    # Same as get_fish(), but doesn't assume images are sorted by cave, year, and month
+def get_unsorted_images(rootDirs=None, excludeDirs=None, verbose=False):
+    # Same as get_images(), but doesn't assume images are sorted by cave, year, and month
     # uses different assignment function and uses path as uuid instead of filename
-    # theoretically, this should work the same as get_fish() if the images are sorted and get_images() can be removed
+    # theoretically, this should work the same as get_images() if the images are sorted and get_images() can be removed
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
+    if excludeDirs is None:
+        excludeDirs = []
     images = {}
     for rootDir in rootDirs:
         for directory, _, _ in os.walk(rootDir):
+            if any(excludeDir in directory for excludeDir in excludeDirs):
+                continue
             files = os.listdir(directory)
             if verbose and len(files) > 0:
                 print(f"Processing {len(files)} files in {directory}")
@@ -183,7 +187,14 @@ def get_unsorted_fish(rootDirs=None, verbose=False):
                     and (".xcf" not in file)
                 ):
                     fileComponents = file.split(".")
-                    uuid = directory.replace(rootDir, "").replace("/", "-") + "-" + fileComponents[0]
+                    uuid = (
+                        directory.replace(rootDir, "").replace("/", "-")
+                        + "-"
+                        + fileComponents[0]
+                    )
+                    # remove leading - if it exists
+                    if uuid[0] == "-":
+                        uuid = uuid[1:]
 
                     if len(fileComponents) == 2 and fileComponents[-1].lower() in [
                         "jpg",
