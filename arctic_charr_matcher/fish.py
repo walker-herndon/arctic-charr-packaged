@@ -50,7 +50,7 @@ class Fish:
 
     @property
     def uuid(self):
-        return f"C{self._cave_number}-{self._year}-{self._month}-{self._file_name}"
+        return self._uuid
 
     @property
     def file_name(self):

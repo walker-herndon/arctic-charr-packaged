@@ -504,14 +504,12 @@ class UnetMaskExtractor:
                         print(i, fish.uuid, originalShape, img.size, tmp.size)
                         i += 1
                     imgs_list.append(
-                        np.array(
-                            (
-                                np.array(img),
-                                ratio,
-                                originalShape,
-                                fish,
-                                np.asarray(origImg),
-                            )
+                        (
+                            np.array(img),
+                            ratio,
+                            originalShape,
+                            fish,
+                            np.asarray(origImg),
                         )
                     )
                 if verbose:
