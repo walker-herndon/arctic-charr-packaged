@@ -22,13 +22,25 @@ def _pathToKey(path: str):
     return f"C{cave}-{year}-{month}-{imgName}"
 
 
-def _translatePath(inPath):
+def _translatePath(fish):
     """Default function for translating an original image path to a result path for spots and masks. Creates intermediate folders if no such end folder exists.
     inPath (str|Path) The path to translate
 
     Returns: (str) The translated path
     """
-    outPath = f"results{os.sep}{os.sep.join(inPath.split(os.sep)[-3:])}"
+    outPath = f"results{os.sep}{os.sep.join(fish.image_path.split(os.sep)[-3:])}"
+    if not os.path.exists(os.path.dirname(outPath)):
+        os.makedirs(os.path.dirname(outPath))
+    return outPath
+
+
+def translatePathUnsorted(fish):
+    """Alternative default function for translating an original image path to a result path for spots and masks. Uses flat folder structure with UUIDs as file names.
+    inPath (str|Path) The path to translate
+
+    Returns: (str) The translated path
+    """
+    outPath = f"results{os.sep}{fish.uuid}"
     if not os.path.exists(os.path.dirname(outPath)):
         os.makedirs(os.path.dirname(outPath))
     return outPath
@@ -259,7 +271,7 @@ class Matcher:
             if fish.image_path is None:
                 raise IOError(f"No image found for fish \n{fish}")
             if fish.mask_path is None:
-                maskResultsPath = self.maskResultOutputDir(fish.image_path)
+                maskResultsPath = self.maskResultOutputDir(fish)
                 fish.mask_path = maskResultsPath + self.maskFileSuffix
 
             if not os.path.isfile(
@@ -290,12 +302,12 @@ class Matcher:
             if fish.image_path is None:
                 raise IOError(f"No image found for fish {fish}")
 
-            spotResultsPath = self.spotResultOutputDir(fish.image_path)
+            spotResultsPath = self.spotResultOutputDir(fish)
             if fish.spot_path is None:
                 fish.spot_path = spotResultsPath + self.spotFileSuffix
                 fish.spotJson = spotResultsPath + self.spotJsonFileSuffix
 
-            maskResultsPath = self.maskResultOutputDir(fish.image_path)
+            maskResultsPath = self.maskResultOutputDir(fish)
 
             if not os.path.isfile(
                 maskResultsPath + self.maskFileSuffix

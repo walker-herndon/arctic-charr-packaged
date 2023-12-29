@@ -87,6 +87,16 @@ def _assignToFish(images, uuid, fileName, attribute, value):
     setattr(images[uuid], attribute, value)
 
 
+def generateUUID(rootDirs, path):
+    """Transforms a path into a uuid where the root is removed and the path is split on os.sep and joined with a -"""
+    root = ""
+    for rootDir in rootDirs:
+        if path.startswith(rootDir):
+            root = rootDir
+            break
+    return "-".join(path.replace(root, "").split(os.sep))
+
+
 def get_images(
     caveNum,
     rootDirs=None,
@@ -102,7 +112,7 @@ def get_images(
     if months is None:
         months = ["June", "Aug"]
     images = {}
-    for directory, cave, year, monthIdx in _dir_generator(
+    for directory, _, _, _ in _dir_generator(
         caveNum,
         rootDirs=rootDirs,
         years=years,
@@ -120,8 +130,7 @@ def get_images(
             ):
                 fileComponents = file.split(".")
                 fileName = fileComponents[0]
-                month = months[monthIdx]
-                uuid = f"Cave{cave}-{str(year)}-{month}-{fileName}"
+                uuid = generateUUID(rootDirs, filePath)
 
                 if len(fileComponents) == 2 and fileComponents[-1].lower() in [
                     "jpg",
@@ -164,9 +173,6 @@ def get_images(
 
 
 def get_unsorted_images(rootDirs=None, excludeDirs=None, verbose=False):
-    # Same as get_images(), but doesn't assume images are sorted by cave, year, and month
-    # uses different assignment function and uses path as uuid instead of filename
-    # theoretically, this should work the same as get_images() if the images are sorted and get_images() can be removed
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
     if excludeDirs is None:
@@ -187,14 +193,7 @@ def get_unsorted_images(rootDirs=None, excludeDirs=None, verbose=False):
                     and (".xcf" not in file)
                 ):
                     fileComponents = file.split(".")
-                    uuid = (
-                        directory.replace(rootDir, "").replace("/", "-")
-                        + "-"
-                        + fileComponents[0]
-                    )
-                    # remove leading - if it exists
-                    if uuid[0] == "-":
-                        uuid = uuid[1:]
+                    uuid = generateUUID(rootDirs, filePath)
 
                     if len(fileComponents) == 2 and fileComponents[-1].lower() in [
                         "jpg",
