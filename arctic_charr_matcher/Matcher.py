@@ -270,8 +270,8 @@ class Matcher:
         for fish in fish_list:
             if fish.image_path is None:
                 raise IOError(f"No image found for fish \n{fish}")
+            maskResultsPath = self.maskResultOutputDir(fish)
             if fish.mask_path is None:
-                maskResultsPath = self.maskResultOutputDir(fish)
                 fish.mask_path = maskResultsPath + self.maskFileSuffix
 
             if not os.path.isfile(

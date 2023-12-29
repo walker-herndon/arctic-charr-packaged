@@ -479,7 +479,7 @@ def findClosestMatch(
     ranking = []
     for fish in fishToCompare:
         if progress or verbose:
-            print(fish)
+            print(fish.uuid)
 
         precomputedFishValues = None
         if fish.precomp is not None:

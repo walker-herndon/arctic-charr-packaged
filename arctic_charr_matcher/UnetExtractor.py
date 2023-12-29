@@ -533,7 +533,7 @@ class UnetMaskExtractor:
                 if verbose:
                     print("Saving...")
 
-                for img, ratio, originalShape, fish, mask in imgs_list:
+                for img, ratio, originalShape, fish, _, mask in imgs_list:
                     # Figure out right height
                     currentMaskHeight = ratio * mask.shape[1]
                     newMask = crop_to_bounds(

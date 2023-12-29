@@ -165,7 +165,7 @@ def get_fish(
                     and fileComponents[2] == "spots"
                     and fileComponents[-1] == "json"
                 ):
-                    _assignToFish(images, uuid, fileName, "spotsJson", filePath)
+                    _assignToFish(images, uuid, fileName, "spotJson", filePath)
                 elif (
                     len(fileComponents) >= 3
                     and fileComponents[2] == "spots"
@@ -230,7 +230,7 @@ def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
                         and fileComponents[2] == "spots"
                         and fileComponents[-1] == "json"
                     ):
-                        _assignToFish(images, uuid, fileName, "spotsJson", filePath)
+                        _assignToFish(images, uuid, fileName, "spotJson", filePath)
                     elif (
                         len(fileComponents) >= 3
                         and fileComponents[2] == "spots"
@@ -283,7 +283,7 @@ def get_fish_from_paths(paths, rootDirs=None, verbose=False):
             and fileComponents[2] == "spots"
             and fileComponents[-1] == "json"
         ):
-            _assignToFish(images, uuid, fileName, "spotsJson", path)
+            _assignToFish(images, uuid, fileName, "spotJson", path)
         elif (
             len(fileComponents) >= 3
             and fileComponents[2] == "spots"
