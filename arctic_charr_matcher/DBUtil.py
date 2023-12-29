@@ -96,7 +96,14 @@ def generateUUID(rootDirs, path):
             break
     pathComponents = path.replace(root, "").split(os.sep)
     pathComponents[-1] = pathComponents[-1].split(".")[0]
-    return "-".join(pathComponents)
+
+    uuid = "-".join(pathComponents)
+    # remove any trailing or leading -
+    if uuid.startswith("-"):
+        uuid = uuid[1:]
+    if uuid.endswith("-"):
+        uuid = uuid[:-1]
+    return uuid
 
 
 def get_fish(
