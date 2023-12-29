@@ -169,7 +169,7 @@ def get_fish(
                     else:
                         _assignToFish(images, uuid, fileName, "spot_path", filePath)
 
-    return list(images.items())
+    return list(images.values())
 
 
 def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
@@ -236,7 +236,7 @@ def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
                         else:
                             _assignToFish(images, uuid, fileName, "spot_path", filePath)
 
-    return list(images.items())
+    return list(images.values())
 
 
 def get_fish_from_paths(paths, rootDirs=None, verbose=False):
@@ -287,7 +287,7 @@ def get_fish_from_paths(paths, rootDirs=None, verbose=False):
             else:
                 _assignToFish(images, uuid, fileName, "spot_path", path)
 
-    return list(images.items())
+    return list(images.values())
 
 
 def connectFish(
