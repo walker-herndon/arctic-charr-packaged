@@ -94,7 +94,9 @@ def generateUUID(rootDirs, path):
         if path.startswith(rootDir):
             root = rootDir
             break
-    return "-".join(path.replace(root, "").split(os.sep))
+    pathComponents = path.replace(root, "").split(os.sep)
+    pathComponents[-1] = pathComponents[-1].split(".")[0]
+    return "-".join(pathComponents)
 
 
 def get_fish(
