@@ -285,7 +285,6 @@ class Matcher:
             self.maskExtractor.generate_masks(
                 fishToProcess,
                 batch_size=self.maskBatchSize,
-                outputDir=self.maskResultOutputDir,
                 verbose=verbose,
             )
 
@@ -295,8 +294,7 @@ class Matcher:
 
         Spot paths and spot json paths can then be accessed by calling fish.spot_path and fish.spotJson.
         """
-        imgFishToProcess = []
-        maskFishToProcess = []
+        fishToProcess = []
 
         for fish in fish_list:
             if fish.image_path is None:
@@ -319,17 +317,14 @@ class Matcher:
             ) or not os.path.isfile(
                 spotResultsPath + self.spotFileSuffix
             ):  # Check if spots file exists
-                imgFishToProcess.append(fish)
-                maskFishToProcess.append(fish)
+                fishToProcess.append(fish)
 
-        if len(imgFishToProcess) > 0:
+        if len(fishToProcess) > 0:
             if verbose:
                 print("Extracting spots")
             self.spotExtractor.generate_spots_patched(
-                imgFishToProcess,
-                maskFishToProcess,
+                fishToProcess,
                 batch_size=self.spotBatchSize,
                 threshold=self.spotThreshold,
-                outputDir=self.spotResultOutputDir,
                 verbose=verbose,
             )
