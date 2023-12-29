@@ -193,6 +193,7 @@ def get_unsorted_images(rootDirs=None, excludeDirs=None, verbose=False):
                     and (".xcf" not in file)
                 ):
                     fileComponents = file.split(".")
+                    fileName = fileComponents[0]
                     uuid = generateUUID(rootDirs, filePath)
 
                     if len(fileComponents) == 2 and fileComponents[-1].lower() in [
@@ -201,26 +202,26 @@ def get_unsorted_images(rootDirs=None, excludeDirs=None, verbose=False):
                         "png",
                         "bmp",
                     ]:
-                        _assignToFish(images, uuid, filePath, "image_path", filePath)
+                        _assignToFish(images, uuid, fileName, "image_path", filePath)
                     elif (
                         len(fileComponents) >= 2
                         and fileComponents[-1].lower() == "pickle"
                     ):
                         if len(fileComponents) >= 3 and fileComponents[1] == "aa":
-                            _assignToFish(images, uuid, filePath, "precompAA", filePath)
+                            _assignToFish(images, uuid, fileName, "precompAA", filePath)
                         else:
-                            _assignToFish(images, uuid, filePath, "precomp", filePath)
+                            _assignToFish(images, uuid, fileName, "precomp", filePath)
                     elif len(fileComponents) >= 3 and fileComponents[2] == "mask":
                         if len(fileComponents) >= 4 and fileComponents[3] == "acc":
-                            _assignToFish(images, uuid, filePath, "maskLabel", filePath)
+                            _assignToFish(images, uuid, fileName, "maskLabel", filePath)
                         else:
-                            _assignToFish(images, uuid, filePath, "mask_path", filePath)
+                            _assignToFish(images, uuid, fileName, "mask_path", filePath)
                     elif (
                         len(fileComponents) >= 3
                         and fileComponents[2] == "spots"
                         and fileComponents[-1] == "json"
                     ):
-                        _assignToFish(images, uuid, filePath, "spotsJson", filePath)
+                        _assignToFish(images, uuid, fileName, "spotsJson", filePath)
                     elif (
                         len(fileComponents) >= 3
                         and fileComponents[2] == "spots"
@@ -230,10 +231,61 @@ def get_unsorted_images(rootDirs=None, excludeDirs=None, verbose=False):
                             len(fileComponents) >= 4 and fileComponents[3] == "acc"
                         ) or fileComponents[2] == "acc":
                             _assignToFish(
-                                images, uuid, filePath, "spotsLabel", filePath
+                                images, uuid, fileName, "spotsLabel", filePath
                             )
                         else:
-                            _assignToFish(images, uuid, filePath, "spot_path", filePath)
+                            _assignToFish(images, uuid, fileName, "spot_path", filePath)
+
+    return images
+
+
+def get_images_from_paths(paths, rootDirs=None, verbose=False):
+    if rootDirs is None:
+        rootDirs = ["../all_images/", "results"]
+    if isinstance(paths, str):
+        paths = [paths]
+    images = {}
+    for path in paths:
+        if verbose:
+            print(f"Processing {path}")
+        fileComponents = path.split(".")
+        fileName = fileComponents[0]
+        uuid = generateUUID(rootDirs, path)
+
+        if len(fileComponents) == 2 and fileComponents[-1].lower() in [
+            "jpg",
+            "jpeg",
+            "png",
+            "bmp",
+        ]:
+            _assignToFish(images, uuid, path, "image_path", path)
+        elif len(fileComponents) >= 2 and fileComponents[-1].lower() == "pickle":
+            if len(fileComponents) >= 3 and fileComponents[1] == "aa":
+                _assignToFish(images, uuid, fileName, "precompAA", path)
+            else:
+                _assignToFish(images, uuid, fileName, "precomp", path)
+        elif len(fileComponents) >= 3 and fileComponents[2] == "mask":
+            if len(fileComponents) >= 4 and fileComponents[3] == "acc":
+                _assignToFish(images, uuid, fileName, "maskLabel", path)
+            else:
+                _assignToFish(images, uuid, fileName, "mask_path", path)
+        elif (
+            len(fileComponents) >= 3
+            and fileComponents[2] == "spots"
+            and fileComponents[-1] == "json"
+        ):
+            _assignToFish(images, uuid, fileName, "spotsJson", path)
+        elif (
+            len(fileComponents) >= 3
+            and fileComponents[2] == "spots"
+            or fileComponents[1] == "spots"
+        ):
+            if (
+                len(fileComponents) >= 4 and fileComponents[3] == "acc"
+            ) or fileComponents[2] == "acc":
+                _assignToFish(images, uuid, fileName, "spotsLabel", path)
+            else:
+                _assignToFish(images, uuid, fileName, "spot_path", path)
 
     return images
 
