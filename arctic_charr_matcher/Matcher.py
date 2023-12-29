@@ -266,7 +266,7 @@ class Matcher:
         Mask paths can then be accessed by calling fish.mask_path.
         """
 
-        pathsToProcess = []
+        fishToProcess = []
         for fish in fish_list:
             if fish.image_path is None:
                 raise IOError(f"No image found for fish \n{fish}")
@@ -277,13 +277,13 @@ class Matcher:
             if not os.path.isfile(
                 maskResultsPath + self.maskFileSuffix
             ):  # Check if file generated exists
-                pathsToProcess.append(fish.image_path)
+                fishToProcess.append(fish)
 
-        if len(pathsToProcess) > 0:
+        if len(fishToProcess) > 0:
             if verbose:
                 print("Extracting masks")
             self.maskExtractor.generate_masks(
-                pathsToProcess,
+                fishToProcess,
                 batch_size=self.maskBatchSize,
                 outputDir=self.maskResultOutputDir,
                 verbose=verbose,
@@ -295,8 +295,8 @@ class Matcher:
 
         Spot paths and spot json paths can then be accessed by calling fish.spot_path and fish.spotJson.
         """
-        imgPathsToProcess = []
-        maskPathsToProcess = []
+        imgFishToProcess = []
+        maskFishToProcess = []
 
         for fish in fish_list:
             if fish.image_path is None:
@@ -319,15 +319,15 @@ class Matcher:
             ) or not os.path.isfile(
                 spotResultsPath + self.spotFileSuffix
             ):  # Check if spots file exists
-                imgPathsToProcess.append(fish.image_path)
-                maskPathsToProcess.append(fish.mask_path)
+                imgFishToProcess.append(fish)
+                maskFishToProcess.append(fish)
 
-        if len(imgPathsToProcess) > 0:
+        if len(imgFishToProcess) > 0:
             if verbose:
                 print("Extracting spots")
             self.spotExtractor.generate_spots_patched(
-                imgPathsToProcess,
-                maskPathsToProcess,
+                imgFishToProcess,
+                maskFishToProcess,
                 batch_size=self.spotBatchSize,
                 threshold=self.spotThreshold,
                 outputDir=self.spotResultOutputDir,
