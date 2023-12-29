@@ -97,7 +97,7 @@ def generateUUID(rootDirs, path):
     return "-".join(path.replace(root, "").split(os.sep))
 
 
-def get_images(
+def get_fish(
     caveNum,
     rootDirs=None,
     years=range(2012, 2020),
@@ -169,10 +169,10 @@ def get_images(
                     else:
                         _assignToFish(images, uuid, fileName, "spot_path", filePath)
 
-    return images
+    return images.items()
 
 
-def get_unsorted_images(rootDirs=None, excludeDirs=None, verbose=False):
+def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
     if excludeDirs is None:
@@ -236,10 +236,10 @@ def get_unsorted_images(rootDirs=None, excludeDirs=None, verbose=False):
                         else:
                             _assignToFish(images, uuid, fileName, "spot_path", filePath)
 
-    return images
+    return images.items()
 
 
-def get_images_from_paths(paths, rootDirs=None, verbose=False):
+def get_fish_from_paths(paths, rootDirs=None, verbose=False):
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
     if isinstance(paths, str):
@@ -287,7 +287,7 @@ def get_images_from_paths(paths, rootDirs=None, verbose=False):
             else:
                 _assignToFish(images, uuid, fileName, "spot_path", path)
 
-    return images
+    return images.items()
 
 
 def connectFish(
