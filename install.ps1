@@ -5,7 +5,7 @@ if (-not (Get-Command python -ErrorAction SilentlyContinue) -and -not (Get-Comma
 }
 
 # Check if pip is installed
-if (-not (Get-Command pip -ErrorAction SilentlyContinue)) {
+if (-not (Get-Command pip -ErrorAction SilentlyContinue) -and -not (Get-Command pip3 -ErrorAction SilentlyContinue)) {
     Write-Host "pip not found. Please install pip." -ForegroundColor Red
     exit 1
 }
@@ -19,6 +19,7 @@ if ($args.Count -eq 0) {
 # Create a new Python venv in the specified path
 $venvPath = Join-Path -Path $args[0] -ChildPath ".venv"
 $pythonExecutable = if (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
+$pipExecutable = if (Get-Command pip3 -ErrorAction SilentlyContinue) { "pip3" } else { "pip" }
 & $pythonExecutable -m venv $venvPath
 
 # Activate the venv
@@ -33,6 +34,7 @@ if (Test-Path $activateScript) {
 if (-not (Test-Path $activateScript)) {
     Write-Host "Please activate the virtual environment and run 'pip install arctic_charr_matcher' manually." -ForegroundColor Yellow
 } else {
-    pip install arctic_charr_matcher
+    & $pipExecutable install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ arctic-charr-matcher==0.1.0
+    ipython kernel install --user --name=.venv
     Write-Host "arctic_charr_matcher installed." -ForegroundColor Green
 }

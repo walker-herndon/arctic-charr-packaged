@@ -248,6 +248,7 @@ def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
     return list(images.values())
 
 
+# TODO: Once the Fish are created, use the UUIDs to search for mask, spot, json, precomp, and precompAA files
 def get_fish_from_paths(paths, rootDirs=None, verbose=False):
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
@@ -297,6 +298,13 @@ def get_fish_from_paths(paths, rootDirs=None, verbose=False):
                 _assignToFish(images, uuid, fileName, "spot_path", path)
 
     return list(images.values())
+
+
+def get_fish_from_uuid(uuid, fish_list):
+    for fish in fish_list:
+        if fish.uuid == uuid:
+            return fish
+    return None
 
 
 def connectFish(
