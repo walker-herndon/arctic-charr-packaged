@@ -2,9 +2,10 @@ import os
 
 from . import UnetExtractor, astroalignMatch, grothMatcherCustom
 from .algorithms import Algorithm
+from .fish import Fish
 
 
-def _pathToKey(path):
+def _pathToKey(path: str):
     """Default function for translating an image path to a key. Assumes path is of form
     <image root>/<year>_<month>/Cave<#>/<image name>.JPG
 
@@ -21,13 +22,25 @@ def _pathToKey(path):
     return f"C{cave}-{year}-{month}-{imgName}"
 
 
-def _translatePath(inPath):
+def _translatePath(fish):
     """Default function for translating an original image path to a result path for spots and masks. Creates intermediate folders if no such end folder exists.
     inPath (str|Path) The path to translate
 
     Returns: (str) The translated path
     """
-    outPath = f"results{os.sep}{os.sep.join(inPath.split(os.sep)[-3:])}"
+    outPath = f"results{os.sep}{os.sep.join(fish.image_path.split(os.sep)[-3:])}"
+    if not os.path.exists(os.path.dirname(outPath)):
+        os.makedirs(os.path.dirname(outPath))
+    return outPath
+
+
+def translatePathUnsorted(fish):
+    """Alternative default function for translating an original image path to a result path for spots and masks. Uses flat folder structure with UUIDs as file names.
+    inPath (str|Path) The path to translate
+
+    Returns: (str) The translated path
+    """
+    outPath = f"results{os.sep}{fish.uuid}"
     if not os.path.exists(os.path.dirname(outPath)):
         os.makedirs(os.path.dirname(outPath))
     return outPath
@@ -65,6 +78,7 @@ class Matcher:
     Matcher class for matching images
     """
 
+    # TODO: Add check to ensure results, groth_cache, and aa_cache folders exist. If not, create them.
     def __init__(
         self,
         imgRoot="all_images",
@@ -94,7 +108,8 @@ class Matcher:
         maskBatchSize       (int)      The batch size to use when processing masks. Speeds up extraction of multiple masks at once, but uses more memory
                                        (GPU or RAM depending if GPU acceleration is used)
         maskResultOutputDir (func)     Function of the from (str | Path) -> (str | Path) which converts an input image path into a path where the result of the mask
-                                       extraction operation should be stored
+                                       extraction operation should be stored. The default function will mirror the path of the image file, but translatePathUnsorted
+                                       can be used instead to produce a flat directory using the fish uuids.
         maskFileSuffix      (str)      The suffix that is used to identify mask files
         customMaskExtractor (Object)   An object that contains a function of form ([str], batch_size=int, outputDir=func (str | Path) -> (str | Path)) -> None
                                        which extracts a mask from the original image to the location indicated by the function passed as the outputDir with the suffix
@@ -163,14 +178,16 @@ class Matcher:
         rankingLimit=None,
         verbose=False,
     ):
-        """Matches a set of images against a second set of images.
-        query_imgs    ([str]|str)            The image keys (or key) that are to be matched
-        matching_imgs ([str]|str)            The image keys (or key) that are to be matched to
-        algorithm     (algorithms.Algorithm) The matching algorithm to use
-        rankingLimit  (int|None)             The max number of reuslts to return
-        verbose       (bool)                 If to print progress
+        """Matches a set of Fish objects against another set of Fish objects.
 
-        Returns dictionary of form:
+        Args:
+            query_imgs    ([Fish]|Fish)          The Fish objects (or Fish object) that are to be matched
+            matching_imgs ([Fish]|Fish)          The Fish objects (or Fish object) that are to be matched to
+            algorithm     (algorithms.Algorithm) The matching algorithm to use
+            rankingLimit  (int|None)             The max number of results to return
+            verbose       (bool)                 If True, print progress
+
+        Returns a dictionary of the form:
         {str: [
             {"file_name": str,
              "ranking": int,
@@ -178,59 +195,29 @@ class Matcher:
         ]}
         """
         # Support both singular input and multiple input
-        if isinstance(query_imgs, str):
+        if isinstance(query_imgs, Fish):
             query_imgs = [query_imgs]
-        if isinstance(matching_imgs, str):
+        if isinstance(matching_imgs, Fish):
             matching_imgs = [matching_imgs]
 
-        all_imgs = query_imgs + matching_imgs
+        all_fish = query_imgs + matching_imgs
 
         # Check if any images need to have masks extracted
-        maskPaths = self.__ensureMasksExtracted(all_imgs, verbose)
+        self.__ensureMasksExtracted(all_fish, verbose)
         # Check if any images need to have spots extracted
-        spotPaths, spotJsonPaths = self.__ensureSpotsExtracted(all_imgs, verbose)
-        # Construct dictionaries for each key
-        inputDictionary = {}
-
-        for i, query_img in enumerate(query_imgs):
-            # The precomp and precompAA are fields for custom cache files outside of the normal cache directory. Just leave blank. Algorithms will check their cache anyway
-            # The label fields are left blank as they are only used for training. Also no labels exist
-            inputDictionary[query_imgs[i]] = {
-                "img": self.keyToPathTranslator(query_img),
-                "mask": maskPaths[i],
-                "maskLabel": None,
-                "spotsLabel": None,
-                "spots": spotPaths[i],
-                "spotsJson": spotJsonPaths[i],
-                "precomp": None,
-                "precompAA": None,
-            }
-
-        comparatorDictionary = {}
-        for i, matching_img in enumerate(matching_imgs):
-            comparatorDictionary[matching_imgs[i]] = {
-                "img": self.keyToPathTranslator(matching_img),
-                "mask": maskPaths[len(query_imgs) + i],
-                "maskLabel": None,
-                "spotsLabel": None,
-                "spots": spotPaths[len(query_imgs) + i],
-                "spotsJson": spotJsonPaths[len(query_imgs) + i],
-                "precomp": None,
-                "precompAA": None,
-            }
+        self.__ensureSpotsExtracted(all_fish, verbose)
 
         results = {}
         # Run the correct algorithm
         if algorithm == Algorithm.CUSTOM_GROTH:
             # grothMatcherCustom.set_cache_dir(self.grothCache)
-            for key in query_imgs:
+            for fish in query_imgs:
                 if verbose:
-                    print(f"Matching {key}")
-                results[key] = []
+                    print(f"Matching {fish.uuid}")
+                results[fish.uuid] = []
                 result = grothMatcherCustom.findClosestMatch(
-                    key,
-                    inputDictionary[key],
-                    comparatorDictionary,
+                    fish,
+                    matching_imgs,
                     cache_dir=self.grothCache,
                     local_triangle_k=25,
                     progress=verbose,
@@ -245,19 +232,18 @@ class Matcher:
                     limit = len(orderedResult)
                 for rank in range(min(limit, len(orderedResult))):
                     r = orderedResult[rank]
-                    results[key].append(
+                    results[fish.uuid].append(
                         {"file_name": r[2], "ranking": rank + 1, "score": r[0]}
                     )
         else:
             # astroalignMatch.set_cache_dir(self.grothCache)
-            for key in query_imgs:
+            for fish in query_imgs:
                 if verbose:
-                    print(f"Matching {key}")
-                results[key] = []
+                    print(f"Matching {fish.uuid}")
+                results[fish.uuid] = []
                 result = astroalignMatch.findClosestMatch(
-                    key,
-                    inputDictionary[key],
-                    comparatorDictionary,
+                    fish,
+                    matching_imgs,
                     cache_dir=self.astroalignCache,
                     progress=verbose,
                 )
@@ -269,7 +255,7 @@ class Matcher:
                     limit = len(orderedResult)
                 for rank in range(min(limit, len(orderedResult))):
                     r = orderedResult[rank]
-                    results[key].append(
+                    results[fish.uuid].append(
                         {"file_name": r[2], "ranking": rank + 1, "score": r[0]}
                     )
 
@@ -277,84 +263,82 @@ class Matcher:
             print("Matching complete")
         return results
 
-    def __ensureMasksExtracted(self, imgs, verbose):
-        """Ensures all images assosciated with the given keys have extracted masks, extracting the masks where necessary
-        imgs ([str]) List of images for which to make sure masks exist, extracting masks when no mask is present.
+    def __ensureMasksExtracted(self, fish_list, verbose):
+        """Ensures all Fish have extracted masks, extracting the masks where necessary.
+        Mask paths can then be accessed by calling fish.mask_path.
 
-        Returns: [str] of mask paths for each img in imgs
+        Args:
+            fish_list ([Fish]): List of Fish for which to make sure masks exist, extracting masks when no mask is present.
+            verbose (bool): If to print verbose information. Defaults to False.
+
+        Returns:
+            None
         """
 
-        pathsToProcess = []
-        maskPaths = []
-        for key in imgs:
-            imgPath = self.keyToPathTranslator(key)
-
-            if imgPath is None:
-                raise IOError(f"No image found for key {key}")
-            maskResultsPath = self.maskResultOutputDir(imgPath)
+        fishToProcess = []
+        for fish in fish_list:
+            if fish.image_path is None:
+                raise IOError(f"No image found for fish \n{fish}")
+            maskResultsPath = self.maskResultOutputDir(fish)
+            if fish.mask_path is None:
+                fish.mask_path = maskResultsPath + self.maskFileSuffix
 
             if not os.path.isfile(
                 maskResultsPath + self.maskFileSuffix
             ):  # Check if file generated exists
-                pathsToProcess.append(imgPath)
-            maskPaths.append(maskResultsPath + self.maskFileSuffix)
+                fishToProcess.append(fish)
 
-        if len(pathsToProcess) > 0:
+        if len(fishToProcess) > 0:
             if verbose:
                 print("Extracting masks")
             self.maskExtractor.generate_masks(
-                pathsToProcess,
+                fishToProcess,
                 batch_size=self.maskBatchSize,
-                outputDir=self.maskResultOutputDir,
                 verbose=verbose,
             )
 
-        return maskPaths
+    def __ensureSpotsExtracted(self, fish_list, verbose):
+        """Ensures all Fish have extracted spots, extracting the spots where necessary.
+        Spot paths and spot json paths can then be accessed by calling fish.spot_path and fish.spotJson.
 
-    def __ensureSpotsExtracted(self, imgs, verbose):
-        """Ensures all images assosciated with the given keys have extracted spots, extracting the spots where necessary
-        imgs ([str]) List of images for which to make sure spots exist, extracting spots when no spot file is present.
+        Args:
+            fish_list ([Fish]) List of Fish for which to make sure spots exist, extracting spots when no spot file is present.
+            verbose (bool): If to print verbose information. Defaults to False.
 
-        Returns: ([str], [str]) of spot paths and spot json paths for each img in imgs
+        Return:
+            None
         """
-        imgPathsToProcess = []
-        maskPathsToProcess = []
-        spotPaths = []
-        spotJsonPaths = []
+        fishToProcess = []
 
-        for key in imgs:
-            imgPath = self.keyToPathTranslator(key)
+        for fish in fish_list:
+            if fish.image_path is None:
+                raise IOError(f"No image found for fish {fish}")
 
-            if imgPath is None:
-                raise IOError("No image found for key {key}")
-            maskResultsPath = self.maskResultOutputDir(imgPath)
+            spotResultsPath = self.spotResultOutputDir(fish)
+            if fish.spot_path is None:
+                fish.spot_path = spotResultsPath + self.spotFileSuffix
+                fish.spotJson = spotResultsPath + self.spotJsonFileSuffix
+
+            maskResultsPath = self.maskResultOutputDir(fish)
 
             if not os.path.isfile(
                 maskResultsPath + self.maskFileSuffix
             ):  # Check if mask file exists
-                raise IOError("No mask found when generating spots for key {key}")
-
-            spotResultsPath = self.spotResultOutputDir(imgPath)
+                raise IOError(f"No mask found when generating spots for fish {fish}")
 
             if not os.path.isfile(
                 spotResultsPath + self.spotJsonFileSuffix
             ) or not os.path.isfile(
                 spotResultsPath + self.spotFileSuffix
             ):  # Check if spots file exists
-                imgPathsToProcess.append(imgPath)
-                maskPathsToProcess.append(maskResultsPath + self.maskFileSuffix)
-            spotPaths.append(spotResultsPath + self.spotFileSuffix)
-            spotJsonPaths.append(spotResultsPath + self.spotJsonFileSuffix)
+                fishToProcess.append(fish)
 
-        if len(imgPathsToProcess) > 0:
+        if len(fishToProcess) > 0:
             if verbose:
                 print("Extracting spots")
             self.spotExtractor.generate_spots_patched(
-                imgPathsToProcess,
-                maskPathsToProcess,
+                fishToProcess,
                 batch_size=self.spotBatchSize,
                 threshold=self.spotThreshold,
-                outputDir=self.spotResultOutputDir,
                 verbose=verbose,
             )
-        return spotPaths, spotJsonPaths

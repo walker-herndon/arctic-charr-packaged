@@ -6,8 +6,8 @@ if ! { command -v python &> /dev/null || command -v python3 &> /dev/null; }; the
     exit 1
 fi
 
-# Check if pip is installed
-if ! command -v pip &> /dev/null; then
+# Check if pip is installed (might be pip3)
+if ! { command -v pip &> /dev/null || command -v pip3 &> /dev/null; }; then
     echo "pip not found. Please install pip."
     exit 1
 fi
@@ -33,11 +33,15 @@ cd "$1"
 # Activate the venv
 source ".venv/bin/activate"
 
-# Install "arctic_charr_matcher" using pip
-# pip install arctic_charr_matcher
-
-# Temporarily install from local directory instead of PyPI
-pip install /Users/walkerherndon/Documents/CS/CS-Year-5/CS5199/Arctic_charr_re_id/dist/arctic_charr_matcher-0.1.0-py3-none-any.whl
-
 echo "Virtual environment created and activated in $venv_path."
+
+# Install "arctic_charr_matcher" using pip
+if command -v pip &> /dev/null; then
+    pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ arctic-charr-matcher==0.1.0
+else
+    pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ arctic-charr-matcher==0.1.0
+fi
+
+ipython kernel install --user --name=.venv
+
 echo "arctic_charr_matcher installed."

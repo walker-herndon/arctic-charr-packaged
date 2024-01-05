@@ -2,6 +2,7 @@ import os
 from enum import Enum
 
 import pandas as pd
+from .fish import Fish
 
 
 class DateOrder(Enum):
@@ -79,23 +80,33 @@ def _dir_generator(
                 print(f"{directory} is not a directory")
 
 
-def _assignToFish(images, fileKey, key, value):
+def _assignToFish(images, uuid, fileName, attribute, value):
     """Helper function to assign value to fish which may not exist"""
-    if fileKey not in images:
-        images[fileKey] = {
-            "img": None,
-            "mask": None,
-            "maskLabel": None,
-            "spotsLabel": None,
-            "spots": None,
-            "spotsJson": None,
-            "precomp": None,
-            "precompAA": None,
-        }
-    images[fileKey][key] = value
+    if uuid not in images:
+        images[uuid] = Fish(fileName, uuid=uuid)
+    setattr(images[uuid], attribute, value)
 
 
-def get_images(
+def generateUUID(rootDirs, path):
+    """Transforms a path into a uuid where the root is removed and the path is split on os.sep and joined with a -"""
+    root = ""
+    for rootDir in rootDirs:
+        if path.startswith(rootDir):
+            root = rootDir
+            break
+    pathComponents = path.replace(root, "").split(os.sep)
+    pathComponents[-1] = pathComponents[-1].split(".")[0]
+
+    uuid = "-".join(pathComponents)
+    # remove any trailing or leading -
+    if uuid.startswith("-"):
+        uuid = uuid[1:]
+    if uuid.endswith("-"):
+        uuid = uuid[:-1]
+    return uuid
+
+
+def get_fish(
     caveNum,
     rootDirs=None,
     years=range(2012, 2020),
@@ -104,13 +115,26 @@ def get_images(
     lastMonth=1,
     verbose=False,
 ):
-    """Creates database of images from directories"""
+    """Generate a list of Fish objects for the given parameters
+
+    Args:
+        caveNum (int): The number of the cave to generate directories for.
+        rootDirs (list, optional): The root directories to generate directories from. Defaults to ["../all_images/", "results"].
+        years (range, optional): The years for which to generate directory paths. Defaults to range(2012, 2020).
+        months (list, optional): The months for which to generate directoy paths. Defaults to ["June", "Aug"].
+        firstMonth (int, optional): The index of the month (in the months list) from which to start generating dates in the first year. Defaults to 0.
+        lastMonth (int, optional): The index of the month (in the months list) to which the dates shuold be generated in the final year. Defaults to 1.
+        verbose (bool, optional): If to print verbose information. Defaults to False.
+
+    Returns:
+        list[Fish]: A list of Fish objects
+    """
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
     if months is None:
         months = ["June", "Aug"]
     images = {}
-    for directory, cave, year, monthIdx in _dir_generator(
+    for directory, _, _, _ in _dir_generator(
         caveNum,
         rootDirs=rootDirs,
         years=years,
@@ -127,7 +151,8 @@ def get_images(
                 and (".xcf" not in file)
             ):
                 fileComponents = file.split(".")
-                fileKey = f"C{cave}-{str(year)}-{months[monthIdx]}-{fileComponents[0]}"
+                fileName = fileComponents[0]
+                uuid = generateUUID(rootDirs, filePath)
 
                 if len(fileComponents) == 2 and fileComponents[-1].lower() in [
                     "jpg",
@@ -135,25 +160,25 @@ def get_images(
                     "png",
                     "bmp",
                 ]:
-                    _assignToFish(images, fileKey, "img", filePath)
+                    _assignToFish(images, uuid, fileName, "image_path", filePath)
                 elif (
                     len(fileComponents) >= 2 and fileComponents[-1].lower() == "pickle"
                 ):
                     if len(fileComponents) >= 3 and fileComponents[1] == "aa":
-                        _assignToFish(images, fileKey, "precompAA", filePath)
+                        _assignToFish(images, uuid, fileName, "precompAA", filePath)
                     else:
-                        _assignToFish(images, fileKey, "precomp", filePath)
+                        _assignToFish(images, uuid, fileName, "precomp", filePath)
                 elif len(fileComponents) >= 3 and fileComponents[2] == "mask":
                     if len(fileComponents) >= 4 and fileComponents[3] == "acc":
-                        _assignToFish(images, fileKey, "maskLabel", filePath)
+                        _assignToFish(images, uuid, fileName, "maskLabel", filePath)
                     else:
-                        _assignToFish(images, fileKey, "mask", filePath)
+                        _assignToFish(images, uuid, fileName, "mask_path", filePath)
                 elif (
                     len(fileComponents) >= 3
                     and fileComponents[2] == "spots"
                     and fileComponents[-1] == "json"
                 ):
-                    _assignToFish(images, fileKey, "spotsJson", filePath)
+                    _assignToFish(images, uuid, fileName, "spotJson", filePath)
                 elif (
                     len(fileComponents) >= 3
                     and fileComponents[2] == "spots"
@@ -162,11 +187,157 @@ def get_images(
                     if (
                         len(fileComponents) >= 4 and fileComponents[3] == "acc"
                     ) or fileComponents[2] == "acc":
-                        _assignToFish(images, fileKey, "spotsLabel", filePath)
+                        _assignToFish(images, uuid, fileName, "spotsLabel", filePath)
                     else:
-                        _assignToFish(images, fileKey, "spots", filePath)
+                        _assignToFish(images, uuid, fileName, "spot_path", filePath)
 
-    return images
+    return list(images.values())
+
+
+def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
+    """Generate a list of Fish objects for the given parameters
+
+    Args:
+        rootDirs (list, optional): The root directories to generate Fish from. Defaults to ["../all_images/", "results"].
+        excludeDirs (list, optional): The subdirectories to exclude. Defaults to None.
+        verbose (bool, optional): If to print verbose information. Defaults to False.
+
+    Returns:
+        list[Fish]: A list of Fish objects
+    """
+    if rootDirs is None:
+        rootDirs = ["../all_images/", "results"]
+    if excludeDirs is None:
+        excludeDirs = []
+    images = {}
+    for rootDir in rootDirs:
+        for directory, _, _ in os.walk(rootDir):
+            if any(excludeDir in directory for excludeDir in excludeDirs):
+                continue
+            files = os.listdir(directory)
+            if verbose and len(files) > 0:
+                print(f"Processing {len(files)} files in {directory}")
+            for file in sorted(os.listdir(directory)):
+                filePath = os.path.join(directory, file)
+                if (
+                    os.path.isfile(filePath)
+                    and ("IMG" in file or "DSC" in file)
+                    and (".xcf" not in file)
+                ):
+                    fileComponents = file.split(".")
+                    fileName = fileComponents[0]
+                    uuid = generateUUID(rootDirs, filePath)
+
+                    if len(fileComponents) == 2 and fileComponents[-1].lower() in [
+                        "jpg",
+                        "jpeg",
+                        "png",
+                        "bmp",
+                    ]:
+                        _assignToFish(images, uuid, fileName, "image_path", filePath)
+                    elif (
+                        len(fileComponents) >= 2
+                        and fileComponents[-1].lower() == "pickle"
+                    ):
+                        if len(fileComponents) >= 3 and fileComponents[1] == "aa":
+                            _assignToFish(images, uuid, fileName, "precompAA", filePath)
+                        else:
+                            _assignToFish(images, uuid, fileName, "precomp", filePath)
+                    elif len(fileComponents) >= 3 and fileComponents[2] == "mask":
+                        if len(fileComponents) >= 4 and fileComponents[3] == "acc":
+                            _assignToFish(images, uuid, fileName, "maskLabel", filePath)
+                        else:
+                            _assignToFish(images, uuid, fileName, "mask_path", filePath)
+                    elif (
+                        len(fileComponents) >= 3
+                        and fileComponents[2] == "spots"
+                        and fileComponents[-1] == "json"
+                    ):
+                        _assignToFish(images, uuid, fileName, "spotJson", filePath)
+                    elif (
+                        len(fileComponents) >= 3
+                        and fileComponents[2] == "spots"
+                        or fileComponents[1] == "spots"
+                    ):
+                        if (
+                            len(fileComponents) >= 4 and fileComponents[3] == "acc"
+                        ) or fileComponents[2] == "acc":
+                            _assignToFish(
+                                images, uuid, fileName, "spotsLabel", filePath
+                            )
+                        else:
+                            _assignToFish(images, uuid, fileName, "spot_path", filePath)
+
+    return list(images.values())
+
+
+# TODO: Once the Fish objects are created, use the UUIDs to search for mask, spot, json, precomp, and precompAA files
+def get_fish_from_paths(paths, rootDirs=None, verbose=False):
+    """Generate a list of Fish objects for the given parameters
+
+    Args:
+        paths (list[str]): The paths to generate Fish objects from.
+        rootDirs (list, optional): The root directories to generate Fish from. Defaults to ["../all_images/", "results"].
+        verbose (bool, optional): If to print verbose information. Defaults to False.
+
+    Returns:
+        list[Fish]: A list of Fish objects
+    """
+    if rootDirs is None:
+        rootDirs = ["../all_images/", "results"]
+    if isinstance(paths, str):
+        paths = [paths]
+    images = {}
+    for path in paths:
+        if verbose:
+            print(f"Processing {path}")
+        fileComponents = path.split(".")
+        fileName = fileComponents[0]
+        uuid = generateUUID(rootDirs, path)
+
+        if len(fileComponents) == 2 and fileComponents[-1].lower() in [
+            "jpg",
+            "jpeg",
+            "png",
+            "bmp",
+        ]:
+            _assignToFish(images, uuid, path, "image_path", path)
+        elif len(fileComponents) >= 2 and fileComponents[-1].lower() == "pickle":
+            if len(fileComponents) >= 3 and fileComponents[1] == "aa":
+                _assignToFish(images, uuid, fileName, "precompAA", path)
+            else:
+                _assignToFish(images, uuid, fileName, "precomp", path)
+        elif len(fileComponents) >= 3 and fileComponents[2] == "mask":
+            if len(fileComponents) >= 4 and fileComponents[3] == "acc":
+                _assignToFish(images, uuid, fileName, "maskLabel", path)
+            else:
+                _assignToFish(images, uuid, fileName, "mask_path", path)
+        elif (
+            len(fileComponents) >= 3
+            and fileComponents[2] == "spots"
+            and fileComponents[-1] == "json"
+        ):
+            _assignToFish(images, uuid, fileName, "spotJson", path)
+        elif (
+            len(fileComponents) >= 3
+            and fileComponents[2] == "spots"
+            or fileComponents[1] == "spots"
+        ):
+            if (
+                len(fileComponents) >= 4 and fileComponents[3] == "acc"
+            ) or fileComponents[2] == "acc":
+                _assignToFish(images, uuid, fileName, "spotsLabel", path)
+            else:
+                _assignToFish(images, uuid, fileName, "spot_path", path)
+
+    return list(images.values())
+
+
+def get_fish_from_uuid(uuid, fish_list):
+    for fish in fish_list:
+        if fish.uuid == uuid:
+            return fish
+    return None
 
 
 def connectFish(

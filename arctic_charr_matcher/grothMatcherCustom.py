@@ -431,28 +431,37 @@ def select_points(pointList, tol_e):
 
 
 def findClosestMatch(
-    modelImageKey,
-    modelDict,
-    imagesToCompareDicts,
-    spotsJsonKey="spotsJson",
-    maskImgKey="mask",
-    precomputedPickle="precomp",
+    query_fish,
+    fishToCompare,
     cache_dir="groth_cache",
     verbose=False,
     progress=False,
     local_triangle_k=0,
 ):
+    """Uses the Groth matching algorithm to find the closest match for the query fish image in the list of fish images to compare.
+
+    Args:
+        query_fish (Fish): The query fish image to find the closest match for.
+        fishToCompare (List[Fish]): The list of fish images to compare to.
+        cache_dir (str, optional): The directory to store cached precomputed values. Defaults to "groth_cache".
+        verbose (bool, optional): If True, print verbose information to stdout. Defaults to False.
+        progress (bool, optional): If True, print progress information to stdout. Defaults to False.
+        local_triangle_k (int, optional): The number of local triangles to use for matching. Defaults to 0.
+
+    Returns:
+        Tuple[float, float, str]: The score, mask coverage, and image name of the closest match.
+    """
     reject_scale = 10000000
     theta_max = 10 * math.pi / 180
     c_max = 1.01
 
     precomputedModelValues = None
-    if modelDict[precomputedPickle] is not None:
-        with open(modelDict[precomputedPickle], "rb") as f:
+    if query_fish.precomp is not None:
+        with open(query_fish.precomp, "rb") as f:
             precomputedModelValues = pickle.load(f)
     else:
         # Try retrieving using local cache
-        precomputedModelValues = retrieve_from_cache(modelImageKey, cache_dir)
+        precomputedModelValues = retrieve_from_cache(query_fish.uuid, cache_dir)
     if (
         precomputedModelValues is None
         or precomputedModelValues["reject_scale"] != reject_scale
@@ -461,12 +470,9 @@ def findClosestMatch(
         or precomputedModelValues["local_triangle_k"] != local_triangle_k
     ):
         precomputedModelValues = precomputeValues(
-            modelDict,
-            modelImageKey,
+            query_fish,
             reject_scale,
             c_max,
-            spotsJsonKey,
-            maskImgKey,
             cache_dir,
             local_triangle_k,
         )
@@ -484,19 +490,17 @@ def findClosestMatch(
             precomputedModelValues["filteredSpots"],
         )
     ranking = []
-    for imageKey in imagesToCompareDicts:
+    for fish in fishToCompare:
         if progress or verbose:
-            print(imageKey)
-
-        comparatorImageDict = imagesToCompareDicts[imageKey]
+            print(fish.uuid)
 
         precomputedFishValues = None
-        if comparatorImageDict[precomputedPickle] is not None:
-            with open(comparatorImageDict[precomputedPickle], "rb") as f:
-                precomputedFishValues = pickle.load(f)
+        if fish.precomp is not None:
+            with open(fish.precomp, "rb") as f:
+                precomputedModelValues = pickle.load(f)
         else:
             # Try retrieving using local cache
-            precomputedFishValues = retrieve_from_cache(imageKey)
+            precomputedFishValues = retrieve_from_cache(fish.uuid, cache_dir)
         if (
             precomputedFishValues is None
             or precomputedFishValues["reject_scale"] != reject_scale
@@ -504,12 +508,9 @@ def findClosestMatch(
             or "local_triangle_k" not in precomputedFishValues
         ):
             precomputedFishValues = precomputeValues(
-                comparatorImageDict,
-                imageKey,
+                fish,
                 reject_scale,
                 c_max,
-                spotsJsonKey,
-                maskImgKey,
                 cache_dir,
                 local_triangle_k,
             )
@@ -517,7 +518,7 @@ def findClosestMatch(
         if precomputedFishValues is None:
             if progress or verbose:
                 print("Not enough points")
-            ranking.append((-1, -1, imageKey))
+            ranking.append((-1, -1, fish.uuid))
             continue
 
         if verbose:
@@ -544,7 +545,7 @@ def findClosestMatch(
                 print("No match found")
 
         ranking.append(
-            (matchScore, (len(matches[0]) if matches is not None else 0), imageKey)
+            (matchScore, (len(matches[0]) if matches is not None else 0), fish.uuid)
         )
     return ranking
 
@@ -558,18 +559,28 @@ def retrieve_from_cache(imgKey, cache_dir="groth_cache"):
 
 
 def precomputeValues(
-    fishDict,
-    imgKey,
+    fish,
     reject_scale,
     c_max,
-    spotsJSONKey="spotsJson",
-    maskImgKey="mask",
     cache_dir="groth_cache",
     local_triangle_k=0,
 ):
+    """
+    Precomputes values for the given fish.
+
+    Args:
+        fish (Fish): The fish object.
+        reject_scale (float): The reject scale value.
+        c_max (float): The maximum value for c.
+        cache_dir (str, optional): The directory to store the precomputed values. Defaults to "groth_cache".
+        local_triangle_k (int, optional): The value of k for local triangles. Defaults to 0.
+
+    Returns:
+        dict: A dictionary containing the precomputed values.
+    """
     spots = None
-    if fishDict[spotsJSONKey] is not None:
-        with open(fishDict[spotsJSONKey], "r", encoding="utf-8") as f:
+    if fish.spotJson is not None:
+        with open(fish.spotJson, "r", encoding="utf-8") as f:
             spots = json.load(f)
     if spots is not None and len(spots) > 5:
         spots = [n[:2] for n in spots]  # Remove size from spots
@@ -577,7 +588,7 @@ def precomputeValues(
             spots[i] for i in range(len(spots)) if i == 0 or spots[i] != spots[i - 1]
         ]  # Remove duplicates
 
-        mask = crop_image(cv2.imread(fishDict[maskImgKey], 0))
+        mask = crop_image(cv2.imread(fish.mask_path, 0))
         R = get_normalise_direction_matrix(mask)
         tmpPoints = np.copy(np.asarray(spots))
         tmpPoints = np.dot(R[:, (0, 1)], np.array([tmpPoints[:, 0], tmpPoints[:, 1]]))
@@ -613,7 +624,7 @@ def precomputeValues(
             "local_triangle_k": local_triangle_k,
             "version": 1,
         }
-        with open(os.path.join(cache_dir, imgKey + ".pickle"), "wb") as f:
+        with open(os.path.join(cache_dir, fish.uuid + ".pickle"), "wb") as f:
             pickle.dump(precomputedObject, f)
         return precomputedObject
     else:

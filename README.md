@@ -6,31 +6,49 @@ Modified by Walker Herndon to transform the code into a python library
 
 #### Instructions for installation
 
-You will need to have python and pip installed to use the library. You can check that these are installed by running `python —version` and `pip —version` in the terminal. Depending on how python was installed on your computer you might have to run `python3 —version` instead, and for any future python commands replace `python` with `python3`.
+You will need to have python and pip installed to use the library. You can check that these are installed by running `python --version` and `pip --version` in the terminal. 
 
-1. Run `python setup.py bdist_wheel` to build the distribution file (stored in the `dist` directory).
+Depending on how these were installed on your computer you might have to run `python3 --version` and `pip3 --version` instead.
 
-2. Create a virtual environment for working with the library and activate it. Further info on virtual environments is provided below if needed.
+If this command lists version number you are good to go, otherwise install Python and Pip now.
 
-3. Run `pip install /path/to/wheelfile.whl` which installs the library and all dependencies.
+##### Mac and Linux
 
-4. Import as normal. To import the matcher for example, use `from arctic_charr_matcher.Matcher import Matcher` (imports `Matcher` class in `Matcher.py`). This could be done in a normal python file, or a Jupyter Notebook file. Note that to use Jupyter Notebook you will need to install it in the virtual environment with `pip install notebook`, then run with `jupyter notebook` and select your virtual environment as the kernel to use within Jupyter.
+With both Python and Pip installed, download the installation script `install.sh`. Once it is downloaded, run it in the terminal using `source ./install.sh path/to/your/project`. This will take a minute to finish running.
 
-##### Virtual Environment Instructions
-Using virtual environments when working with Python is good practice as it keeps your dependencies separated between different programs.
+Then to use it in a Jupyter Notebook, simply run `jupyter notebook`, go to localhost:8888/tree in your browser, and create a new notebook file. You will need to select `.venv` as your kernel. You can then import and use the library as shown below.
 
-Comprehensive documentation of Python virtual environments, or “venv” can be found [here](https://docs.python.org/3/library/venv.html), but the basics are also provided below.
+##### Windows
+
+With both Python and Pip installed, download the installation script `install.ps1`. Once it is downloaded, run it in the terminal using `.\setup_venv.ps1 C:\path\to\your\project`. This will take a minute to finish running.
+
+Next run the following:
+1. `cd C:path\to\your\project`
+2. `.venv\Scripts\Activate.ps1`
+3. `jupyter notebook`
+
+Then to use it in a Jupyter Notebook, simply run `jupyter notebook`, go to localhost:8888/tree in your browser, and create a new notebook file. You will need to select `.venv` as your kernel. You can then import and use the library as shown below.
+
+##### Working with virual environments
+
+Using virtual environments when working with Python is good practice as it keeps your dependencies separated between different programs. The installation scripts above will automatically create a virtual environment with everything needed for the matcher installed within it. The virtual environment will be created at the path you provide.
+
+Comprehensive documentation of Python virtual environments, or “venv” can be found [here](https://docs.python.org/3/library/venv.html), but the basics are also provided below. You don't need to worry about this when first installing the matcher as the process is done for you, but when you continue working on the project in the future this information will be useful.
 
 1. To create a new virtual environment run `python -m venv /path/to/venv` where the path can be anywhere you’d like to store the virtual environment. Virtual environment directories are often named something like `.venv` (the dot at the start makes the folder hidden by default), but you can name it whatever you’d like.
 2. To use the venv, first activate it by running `source <venv>/bin/activate` where `<venv>` is the path to the venv given in step 1. This command assumes the shell you are using is bash or ash (bash is the default on Mac and Linux so if that doesn’t mean anything to you, you are almost definitely using bash). If you aren’t using bash or zsh the equivalent command for your shell can be found in the documentation linked above.
 3. Now that the venv is activated, when you install a library using `pip install <library>` it will be installed within the venv instead of globally. This is why virtual environments are good to keep your dependencies organized.
 4. To deactivate the virtual environment again, just run `deactivate`.
 
+If you have previously run the installation script and want to use the matcher again, just go to the terminal, run `cd path/to/your/project` and activate the environment as shown above. Then, just run `jupyter notebook`.
+
 #### Usage
-Start by importing the library
+
+Start by importing some classes from the library
 ```python
 from arctic_charr_matcher.Matcher import Matcher
 from arctic_charr_matcher import DBUtil
+from arctic_charr_matcher.algorithms import Algorithm
 ```
 
 Next, initialize the matcher
@@ -41,11 +59,17 @@ matcher = Matcher(
 	spotUnetWeights="path/to/spot_model.hdf5"
 )
 ```
+**INCLUDE SOMETHING ABOUT THOSE OTHER PARAMETERS TOO**
 
 You'll need to supply the images to work with and the trained models.
 
-Here's what the file structure for the images needs to look like:
-<!-- Created with [tree.nathanfriend.io](https://tree.nathanfriend.io) -->
+##### Creating Image List
+
+`DBUtil` is used to generate the list of images to be used by the matcher. There are a few options for how to generate the image list which are outlined below. All of these functions return a list of `Fish` objects, each of which are associated with one of the fish images. The list of `Fish` objects is what the matcher takes in.
+
+###### From sorted images
+
+If your images are organized you can provide a date range for the images that should be passed to the matcher. Here's what the file structure for the images needs to look like:
 
 ```
 └── images/
@@ -57,30 +81,82 @@ Here's what the file structure for the images needs to look like:
 	│ ├── Cave2/
 	│ ├── Cave3/
 	│ └── ...
-	├── 2012_August/
+	├── 2012_Aug/
 	├── 2013_June/
-	├── 2013_August/
+	├── 2013_Aug/
 	└── ...
 ```
 
-Next we need to get the image keys to pass into the matcher. For this we use `DBUtil`
+Here is an example of using `DBUtil.get_fish` to get the list of images:
 
 ```python
-baseImages = DBUtil.get_images(21, rootDirs=["path/to/images", "path/to/results"], years=range(2015,2018))
+matchingImages = DBUtil.get_fish(21, rootDirs=["path/to/images", "path/to/results"], years=range(2015,2018))
 ```
-Here we are loading in the base images. These are the images we will attempt to match the query against. There are a few parameters to consider:
+Here we are loading in the images to match our query image against. There are a few parameters to consider:
 - **Cave number:** I've picked 21 but it can be any cave you want to run the matcher on.
-- **rootDirs:** should be the path to the images, and the path to a results directory which will be created when running the matcher if it hasn't already been. This directory will hold the image mask and spot files which is what the matcher actually runs on. It should be in the same root directory as you are running your script from.
-- **years:** the range of years you want to include in `baseImages` (includes the start year but not the end, so my example is `[2015, 2016, 2017]`)
+- **rootDirs:** should be the path to the base image directory, and the path to a results directory which **you will need to create in your project folder if it isn't already there**. This directory will hold the image mask and spot files which is what the matcher performs matching on. This should be in the same directory as you are running your script from.
+- **years:** the range of years you want to include in `matchingImages` (first value is inclusive, second is exclusive, so this example is `[2015, 2016, 2017]`)
 
-The same thing can be done to load in the query images, or if you just want to query a single image you can pass that in manually.
+Other parameters:
+- **months:** defaults to `["June", "Aug"]` but if your months are different you can provide your own list of months here.
+- **firstMonth:** defaults to 0, this value is the first index of the months list to use. By default this means it will start with June from the first year in the range provided. Change to 1 to start with Aug instead, or to another number to start with another month in your custom month list.
+- **lastMonth:** defaults to 1, this is the last index of the months list to use. By default this means it will end on Aug of the last year in the range provided. Change to 0 to end with June instead, or to another number to end with another month in your custom month list.
+- **verbose:** defaults to False, set to True to print more information when running.
+
+###### From unsorted images
+
+If your images are not sorted, or you want to use all images in the directory for matching, you can use `DBUtil.get_unsorted_fish` instead.
+
+```python
+matchingImages = DBUtil.get_unsorted_fish(rootDirs=["path/to/images", "path/to/results"])
+```
+**rootDirs** is the same as in `DBUtil.get_fish`.
+
+Other parameters:
+- **excludeDirs:** can be used to provide a list of subdirectories to skip over.
+- **verbose:** defaults to False, set to True to print more information when running.
+
+###### From specific image paths
+
+If you want only a select few images, you can provide a list of the paths to those images instead and use `DBUtil.get_fish_from_paths`
+
+```python
+queryImages = DBUtil.get_fish_from_paths(["path/to/IMG_1234.JPG", "path/to/IMG_2468.JPG"], rootDirs=["path/to/images", "path/to/results"])
+```
+Here, we use `DBUtil.get_fish_from_paths` to select two images for our query. We also need to provide the root image directories again for the image generation to work properly. This function also has the **verbose** option to provide more information when running.
+
+##### Matching
 
 Finally, we can run the matcher:
 ```python
-matches = matcher.matching(query_images=['C21-2019-June-IMG_3664'], matching_imgs=list(baseImages.keys()), rankingLimit=5)
+matches = matcher.matching(query_images=queryImages, matching_imgs=matchingImages, rankingLimit=5)
 ```
 
-Here I have just passed in a single query image: `images/2019_June/Cave21/IMG_3664.JPG`
-`matching_imgs` takes in a list of keys which we get from the `baseImages` dict. We also set `rankingLimit` to 5 here to limit the results to the best 5 images.
+Here I have passed in the two query images acquired from `DBUtil.get_fish_from_paths`. They are matched against the list of images acquired from either `DBUtil.get_fish` or `DBUtil.get_unsorted_fish`. We also set `rankingLimit` to 5 here to limit the results to the best 5 images.
 
-This command can take quite a while to run. It will go through every image in `baseImages` and generate the mask and spot files if they haven't already been created, then attempt to match then with the query image. Creating the mask and spot files takes some time and the matching takes some time itself. Subsequent runs will be considerably faster as the mask and spot files are saved, and the matching data is cached.
+This command can take quite a while to run. It will go through every image provided and generate the mask and spot files if they haven't already been created, then attempt to match then with the query image(s). Creating the mask and spot files takes some time and the matching takes some time itself. Subsequent runs will be considerably faster as the mask and spot files are saved, and the matching data is cached.
+
+Other parameters:
+- **algorithm:** this defaults to Algorithm.CUSTOM_GROTH. To use the Astroalign matcher pass in Algorithm.Astroalign instead.
+- **verbose:** this defaults to False, set to True for more information when running. Using `verbose=True` is recommended when running the matcher so you can follow the progress at it runs and ensure it is running smoothly. Without this set it may seem like nothing is happening for a while.
+
+The results from `matcher.matching` will be in the form of a list of results for each query. Each result is a dictionary with three elements:
+- **"file_name":** The unique ID (UUID) of the fish file.
+- **"ranking":** The ranking of the results. In this example with rankingLimit set to 5 this will a value from 1 to 5.
+- **"score":** The 'score' given by the matching algorithm for the image. The higher the score, the more similar the image is to the query. Note that scores from the Groth matcher and Astroalign cannot be compared.
+
+To get the `Fish` object from the UUID of a fish listed in the results use `DBUtil.get_fish_from_uuid`
+
+```python
+fishResult = DBUtil.get_fish_from_uuid("image-uuid-here", matchingImages)
+```
+The first parameter is the UUID of the fish, and the second is the list of Fish objects to search through. This function will return a single `Fish` object. The image path can then be attained from `fishResult.image_path`.
+
+You can also display the image in Jupyter Notebook using IPython.display. This can be installed through pip by running `pip install ipython`.
+
+```python
+from IPython.display import Image
+Image(fishResult.image_path)
+```
+
+This can also be used to display the mask and spot images by doing `Image(fishResult.mask_path)` or `Image(fishResult.spot_path)`
