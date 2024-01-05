@@ -115,7 +115,20 @@ def get_fish(
     lastMonth=1,
     verbose=False,
 ):
-    """Creates database of images from directories"""
+    """Generate a list of Fish objects for the given parameters
+
+    Args:
+        caveNum (int): The number of the cave to generate directories for.
+        rootDirs (list, optional): The root directories to generate directories from. Defaults to ["../all_images/", "results"].
+        years (range, optional): The years for which to generate directory paths. Defaults to range(2012, 2020).
+        months (list, optional): The months for which to generate directoy paths. Defaults to ["June", "Aug"].
+        firstMonth (int, optional): The index of the month (in the months list) from which to start generating dates in the first year. Defaults to 0.
+        lastMonth (int, optional): The index of the month (in the months list) to which the dates shuold be generated in the final year. Defaults to 1.
+        verbose (bool, optional): If to print verbose information. Defaults to False.
+
+    Returns:
+        list[Fish]: A list of Fish objects
+    """
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
     if months is None:
@@ -182,6 +195,16 @@ def get_fish(
 
 
 def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
+    """Generate a list of Fish objects for the given parameters
+
+    Args:
+        rootDirs (list, optional): The root directories to generate Fish from. Defaults to ["../all_images/", "results"].
+        excludeDirs (list, optional): The subdirectories to exclude. Defaults to None.
+        verbose (bool, optional): If to print verbose information. Defaults to False.
+
+    Returns:
+        list[Fish]: A list of Fish objects
+    """
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
     if excludeDirs is None:
@@ -248,8 +271,18 @@ def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
     return list(images.values())
 
 
-# TODO: Once the Fish are created, use the UUIDs to search for mask, spot, json, precomp, and precompAA files
+# TODO: Once the Fish objects are created, use the UUIDs to search for mask, spot, json, precomp, and precompAA files
 def get_fish_from_paths(paths, rootDirs=None, verbose=False):
+    """Generate a list of Fish objects for the given parameters
+
+    Args:
+        paths (list[str]): The paths to generate Fish objects from.
+        rootDirs (list, optional): The root directories to generate Fish from. Defaults to ["../all_images/", "results"].
+        verbose (bool, optional): If to print verbose information. Defaults to False.
+
+    Returns:
+        list[Fish]: A list of Fish objects
+    """
     if rootDirs is None:
         rootDirs = ["../all_images/", "results"]
     if isinstance(paths, str):

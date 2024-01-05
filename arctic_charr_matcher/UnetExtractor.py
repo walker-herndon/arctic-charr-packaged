@@ -67,13 +67,25 @@ class UnetSpotExtractor:
         self,
         fishes,
         maskPaths,
-        # suffix=".spots.png",
-        # suffix_json_spots=".spots.json",
         batch_size=5,
         verbose=False,
         threshold=-1,
-        # outputDir=None,
     ):
+        """
+        Generates spots for the given fishes using the trained model.
+
+        Args:
+            fishes (list): A list of Fish objects.
+            maskPaths (list): A list of file paths to the corresponding mask images.
+            batch_size (int, optional): The batch size for processing the images. Defaults to 5.
+            verbose (bool, optional): Whether to print verbose output. Defaults to False.
+            threshold (int, optional): The threshold value for binarizing the predicted spots.
+                Pixels with values greater than the threshold will be set to 1, and pixels with
+                values less than or equal to the threshold will be set to 0. Defaults to -1.
+
+        Returns:
+            None
+        """
         if self.trained:
             batchNum = 1
             batches = np.array_split(fishes, math.ceil(len(fishes) / batch_size))
@@ -81,12 +93,12 @@ class UnetSpotExtractor:
                 maskPaths, math.ceil(len(fishes) / batch_size)
             )
             for batchNum, batch in enumerate(batches):
-                # mask_batch = batches_masks[batchNum]
                 if verbose:
                     print(f"Batch: {batchNum + 1}/{len(batches_masks)}")
                 imgs_list = []
                 i = 0
                 for fish in batch:
+                    # Process each fish image
                     img = read_PIL_image(fish.image_path)
                     # If input to model is grayscale, convert to grayscale
                     if self.inputShape[2] == 1:
@@ -94,7 +106,7 @@ class UnetSpotExtractor:
 
                     if fish.mask_path is None:
                         if verbose:
-                            print(f"No mask avaliable for: {fish.uuid}")
+                            print(f"No mask available for: {fish.uuid}")
                         continue
                     fm = read_PIL_image(fish.mask_path).convert("L")
 
@@ -161,18 +173,8 @@ class UnetSpotExtractor:
 
                     for img, fish, ratio, originalShape, spots in imgs_list:
                         # Figure out right height
-                        # spots = spots.reshape(spots.shape[0], spots.shape[1])
                         currentSpotsHeight = ratio * spots.shape[1]
                         spots = spots.reshape(spots.shape[0], spots.shape[1])
-                        print(
-                            spots.shape,
-                            [
-                                round(spots.shape[1] / 2 - currentSpotsHeight / 2),
-                                round(spots.shape[1] / 2 + currentSpotsHeight / 2),
-                                0,
-                                spots.shape[0],
-                            ],
-                        )
                         newSpots = crop_to_bounds(
                             spots,
                             [
@@ -190,49 +192,6 @@ class UnetSpotExtractor:
                         Image.fromarray(newSpots).save(fish.spot_path)
                         with open(fish.spotsJson, "w", encoding="utf-8") as f:
                             json.dump(getPointsFromImage(newSpots), f)
-                        # if outputDir is None:
-                        #     print(imageName + suffix)
-                        #     Image.fromarray(newSpots).save(
-                        #         imageName + suffix, suffix.split(".")[-1]
-                        #     )
-                        #     with open(
-                        #         imageName + suffix_json_spots, "w", encoding="utf-8"
-                        #     ) as f:
-                        #         json.dump(getPointsFromImage(newSpots), f)
-                        # elif callable(outputDir):
-                        #     print(outputDir(imageName) + suffix)
-                        #     Image.fromarray(newSpots).save(
-                        #         outputDir(imageName) + suffix, suffix.split(".")[-1]
-                        #     )
-                        #     with open(
-                        #         outputDir(imageName) + suffix_json_spots,
-                        #         "w",
-                        #         encoding="utf-8",
-                        #     ) as f:
-                        #         json.dump(getPointsFromImage(newSpots), f)
-                        # else:
-                        #     print(
-                        #         outputDir
-                        #         + os.sep
-                        #         + imageName.split(os.sep)[-1]
-                        #         + suffix
-                        #     )
-                        #     Image.fromarray(newSpots).save(
-                        #         outputDir
-                        #         + os.sep
-                        #         + imageName.split(os.sep)[-1]
-                        #         + suffix,
-                        #         suffix.split(".")[-1],
-                        #     )
-                        #     with open(
-                        #         outputDir
-                        #         + os.sep
-                        #         + imageName.split(os.sep)[-1]
-                        #         + suffix_json_spots,
-                        #         "w",
-                        #         encoding="utf-8",
-                        #     ) as f:
-                        #         json.dump(getPointsFromImage(newSpots), f)
                 else:
                     print("No images in batch to process...")
 
@@ -243,13 +202,24 @@ class UnetSpotExtractor:
     def generate_spots_patched(
         self,
         fishes,
-        # suffix=".spots.png",
-        # suffix_json_spots=".spots.json",
         batch_size=5,
         verbose=False,
         threshold=-1,
-        # outputDir=None,
     ):
+        """
+        Generates filled-in spots for the given fishes using the trained model.
+
+        Args:
+            fishes (list): A list of Fish objects.
+            batch_size (int, optional): The batch size for processing the images. Defaults to 5.
+            verbose (bool, optional): Whether to print verbose output. Defaults to False.
+            threshold (int, optional): The threshold value for binarizing the predicted spots.
+                Pixels with values greater than the threshold will be set to 1, and pixels with
+                values less than or equal to the threshold will be set to 0. Defaults to -1.
+
+        Returns:
+            None
+        """
         if self.trained:
             img_num = 0
             for fish in fishes:
@@ -311,48 +281,6 @@ class UnetSpotExtractor:
                 spotsFullImg.save(fish.spot_path)
                 with open(fish.spotJson, "w", encoding="utf-8") as f:
                     json.dump(getPointsFromImage(np.asarray(spotsFullImg)), f)
-
-                # if outputDir is None:
-                #     if verbose:
-                #         print(fish.image_path + suffix)
-                #     spotsFullImg.save(fish.image_path + suffix, suffix.split(".")[-1])
-                #     with open(
-                #         fish.image_path + suffix_json_spots, "w", encoding="utf-8"
-                #     ) as f:
-                #         json.dump(getPointsFromImage(np.asarray(spotsFullImg)), f)
-                # elif callable(outputDir):
-                #     if verbose:
-                #         print(outputDir(fish.image_path) + suffix)
-                #     spotsFullImg.save(
-                #         outputDir(fish.image_path) + suffix, suffix.split(".")[-1]
-                #     )
-                #     with open(
-                #         outputDir(fish.image_path) + suffix_json_spots,
-                #         "w",
-                #         encoding="utf-8",
-                #     ) as f:
-                #         json.dump(getPointsFromImage(np.asarray(spotsFullImg)), f)
-                # else:
-                #     if verbose:
-                #         print(
-                #             outputDir
-                #             + os.sep
-                #             + fish.image_path.split(os.sep)[-1]
-                #             + suffix
-                #         )
-                #     spotsFullImg.save(
-                #         outputDir + os.sep + fish.image_path.split(os.sep)[-1] + suffix,
-                #         suffix.split(".")[-1],
-                #     )
-                #     with open(
-                #         outputDir
-                #         + os.sep
-                #         + fish.image_path.split(os.sep)[-1]
-                #         + suffix_json_spots,
-                #         "w",
-                #         encoding="utf-8",
-                #     ) as f:
-                #         json.dump(getPointsFromImage(np.asarray(spotsFullImg)), f)
 
                 img_num += 1
         else:
@@ -475,12 +403,22 @@ class UnetMaskExtractor:
     def generate_masks(
         self,
         fish,
-        # suffix=".mask.png",
         batch_size=5,
         verbose=False,
-        # outputDir=None,
         threshold=0.31,
     ):
+        """
+        Generates masks for a batch of fish images.
+
+        Args:
+            fish (list): List of fish objects.
+            batch_size (int, optional): Number of fish images to process in each batch. Defaults to 5.
+            verbose (bool, optional): Whether to print verbose output. Defaults to False.
+            threshold (float, optional): Threshold value for mask prediction. Defaults to 0.31.
+
+        Returns:
+            None
+        """
         if self.trained:
             batchNum = 1
             batches = np.array_split(fish, math.ceil(len(fish) / batch_size))
@@ -552,20 +490,7 @@ class UnetMaskExtractor:
                                 f"Could not extract fish mask succesfully from: {fish.uuid}"
                             )
                     Image.fromarray(newMask).save(fish.mask_path)
-                    # if outputDir is None:
-                    #     Image.fromarray(newMask).save(
-                    #         fish.image_path + suffix, suffix.split(".")[-1]
-                    #     )
-                    # elif callable(outputDir):
-                    #     Image.fromarray(newMask).save(
-                    #         outputDir(imageName) + suffix, suffix.split(".")[-1]
-                    #     )
-                    # else:
-                    #     Image.fromarray(newMask).save(
-                    #         outputDir + os.sep + imageName.split(os.sep)[-1] + suffix,
-                    #         suffix.split(".")[-1],
-                    #     )
-                batchNum += 1
+                    batchNum += 1
         else:
             print("Network not trained")
 

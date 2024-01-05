@@ -59,6 +59,7 @@ matcher = Matcher(
 	spotUnetWeights="path/to/spot_model.hdf5"
 )
 ```
+**INCLUDE SOMETHING ABOUT THOSE OTHER PARAMETERS TOO**
 
 You'll need to supply the images to work with and the trained models.
 

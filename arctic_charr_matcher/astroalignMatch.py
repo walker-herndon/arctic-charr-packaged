@@ -95,17 +95,14 @@ def open_cached(
     fish,
     cache_dir="aa_cache",
 ):
-    """Attempts to open a cached version of precomputed values for the comparison. Computes these if necessarty and saves to cache.
+    """Attempts to open a cached version of precomputed values for the comparison. Computes these if necessary and saves to cache.
 
     Args:
-        modelDict (Dict): The dictionary describing the fish
-        imageKey (str): The key of the fish
-        spotsJsonKey (str, optional): The name of the key under which the json file name containing the spots of the fish is saved. Defaults to 'spotsJson'.
-        maskImgKey (str, optional): The name of the key under which the image name containing the mask of the fish is saved. Defaults to 'mask'.
-        precomputedPickle (str, optional): name of the key under which the cached precomputed values are stored, if not in the standard location. Defaults to 'precompAA'.
+        fish (Fish): The fish object containing the information for comparison.
+        cache_dir (str, optional): The directory where the cached values are stored. Defaults to "aa_cache".
 
     Returns:
-        dict: The dictionary of precomputed values
+        dict: The dictionary of precomputed values.
     """
     precomputedModelValues = None
     if fish.precompAA is not None:
@@ -136,14 +133,11 @@ def precomputeValues(
     """Precomputes values necessary for comparison of the fish to another fish
 
     Args:
-        fishDict (dict[str,str]): The dictionary describing all components of the fish image
-        imgKey (str): The key of the fish imge
-        spotsJSONKey (str, optional): The key in the dictionary indicating the filepath to the json file containing the spot information for the fish. Defaults to 'spotsJson'.
-        maskImgKey (str, optional): The key in the dictionary indicating the filepath to the mask file containing the boolean mask for the fish. Defaults to 'mask'.
-        precomputedPickle (str, optional): The key in the dictionary indicating the filepath to the precomputed values of the fish. Defaults to 'precompAA'.
+        fish (Fish): The fish object for which to precompute values.
+        cache_dir (str, optional): The directory where the precomputed values will be cached. Defaults to "aa_cache".
 
     Returns:
-        [type]: [description]
+        dict: The dictionary of precomputed values.
     """
     spots = None
     if fish.spotJson is not None:
@@ -198,16 +192,14 @@ def findClosestMatch(
     verbose=False,
     progress=False,
 ):
-    """Finds the best matches for the model image in the images to compare dictionaries
+    """Uses the Astroalign matching algorithm to find the best matches for the model image in the images to compare dictionaries
 
     Args:
-        modelImageName (str): The name of the image being compared
-        modelDict (dict): The dictionary containing data about the image
-        imagesToComareDicts (Dict[Dict]): The list of other image dictionaries to compare to.
-        spotsJsonKey (str, optional): The key in the dictionary indicating the filepath to the json file containing the spot information for the fish. Defaults to 'spotsJson'.
-        maskImgKey (str, optional): The key in the dictionary indicating the filepath to the mask file containing the boolean mask for the fish. Defaults to 'mask'.
-        verbose (bool, optional): If to print verbose information to stdout. Defaults to False.
-        progress (bool, optional): If to pring progress information to stdout. Defaults to False.
+        query_fish (Fish): The model fish image to compare.
+        fishToComare (List[Fish]): The list of fish images to compare to.
+        cache_dir (str, optional): The directory to store cached precomputed values. Defaults to "aa_cache".
+        verbose (bool, optional): If True, print verbose information to stdout. Defaults to False.
+        progress (bool, optional): If True, print progress information to stdout. Defaults to False.
 
     Returns:
         List[Tuple[float, float, str]]: List of tuples of (score, maskCoverage, image name) for each image the model image was compared to.

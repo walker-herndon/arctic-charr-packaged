@@ -78,6 +78,7 @@ class Matcher:
     Matcher class for matching images
     """
 
+    # TODO: Add check to ensure results, groth_cache, and aa_cache folders exist. If not, create them.
     def __init__(
         self,
         imgRoot="all_images",
@@ -107,7 +108,8 @@ class Matcher:
         maskBatchSize       (int)      The batch size to use when processing masks. Speeds up extraction of multiple masks at once, but uses more memory
                                        (GPU or RAM depending if GPU acceleration is used)
         maskResultOutputDir (func)     Function of the from (str | Path) -> (str | Path) which converts an input image path into a path where the result of the mask
-                                       extraction operation should be stored
+                                       extraction operation should be stored. The default function will mirror the path of the image file, but translatePathUnsorted
+                                       can be used instead to produce a flat directory using the fish uuids.
         maskFileSuffix      (str)      The suffix that is used to identify mask files
         customMaskExtractor (Object)   An object that contains a function of form ([str], batch_size=int, outputDir=func (str | Path) -> (str | Path)) -> None
                                        which extracts a mask from the original image to the location indicated by the function passed as the outputDir with the suffix
@@ -176,14 +178,16 @@ class Matcher:
         rankingLimit=None,
         verbose=False,
     ):
-        """Matches a set of images against a second set of images.
-        query_imgs    ([str]|str)            The image keys (or key) that are to be matched
-        matching_imgs ([str]|str)            The image keys (or key) that are to be matched to
-        algorithm     (algorithms.Algorithm) The matching algorithm to use
-        rankingLimit  (int|None)             The max number of reuslts to return
-        verbose       (bool)                 If to print progress
+        """Matches a set of Fish objects against another set of Fish objects.
 
-        Returns dictionary of form:
+        Args:
+            query_imgs    ([Fish]|Fish)          The Fish objects (or Fish object) that are to be matched
+            matching_imgs ([Fish]|Fish)          The Fish objects (or Fish object) that are to be matched to
+            algorithm     (algorithms.Algorithm) The matching algorithm to use
+            rankingLimit  (int|None)             The max number of results to return
+            verbose       (bool)                 If True, print progress
+
+        Returns a dictionary of the form:
         {str: [
             {"file_name": str,
              "ranking": int,
@@ -260,10 +264,15 @@ class Matcher:
         return results
 
     def __ensureMasksExtracted(self, fish_list, verbose):
-        """Ensures all images assosciated with the given keys have extracted masks, extracting the masks where necessary
-        imgs ([str]) List of images for which to make sure masks exist, extracting masks when no mask is present.
-
+        """Ensures all Fish have extracted masks, extracting the masks where necessary.
         Mask paths can then be accessed by calling fish.mask_path.
+
+        Args:
+            fish_list ([Fish]): List of Fish for which to make sure masks exist, extracting masks when no mask is present.
+            verbose (bool): If to print verbose information. Defaults to False.
+
+        Returns:
+            None
         """
 
         fishToProcess = []
@@ -289,10 +298,15 @@ class Matcher:
             )
 
     def __ensureSpotsExtracted(self, fish_list, verbose):
-        """Ensures all images assosciated with the given keys have extracted spots, extracting the spots where necessary
-        imgs ([str]) List of images for which to make sure spots exist, extracting spots when no spot file is present.
-
+        """Ensures all Fish have extracted spots, extracting the spots where necessary.
         Spot paths and spot json paths can then be accessed by calling fish.spot_path and fish.spotJson.
+
+        Args:
+            fish_list ([Fish]) List of Fish for which to make sure spots exist, extracting spots when no spot file is present.
+            verbose (bool): If to print verbose information. Defaults to False.
+
+        Return:
+            None
         """
         fishToProcess = []
 

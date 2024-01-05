@@ -438,6 +438,19 @@ def findClosestMatch(
     progress=False,
     local_triangle_k=0,
 ):
+    """Uses the Groth matching algorithm to find the closest match for the query fish image in the list of fish images to compare.
+
+    Args:
+        query_fish (Fish): The query fish image to find the closest match for.
+        fishToCompare (List[Fish]): The list of fish images to compare to.
+        cache_dir (str, optional): The directory to store cached precomputed values. Defaults to "groth_cache".
+        verbose (bool, optional): If True, print verbose information to stdout. Defaults to False.
+        progress (bool, optional): If True, print progress information to stdout. Defaults to False.
+        local_triangle_k (int, optional): The number of local triangles to use for matching. Defaults to 0.
+
+    Returns:
+        Tuple[float, float, str]: The score, mask coverage, and image name of the closest match.
+    """
     reject_scale = 10000000
     theta_max = 10 * math.pi / 180
     c_max = 1.01
@@ -552,6 +565,19 @@ def precomputeValues(
     cache_dir="groth_cache",
     local_triangle_k=0,
 ):
+    """
+    Precomputes values for the given fish.
+
+    Args:
+        fish (Fish): The fish object.
+        reject_scale (float): The reject scale value.
+        c_max (float): The maximum value for c.
+        cache_dir (str, optional): The directory to store the precomputed values. Defaults to "groth_cache".
+        local_triangle_k (int, optional): The value of k for local triangles. Defaults to 0.
+
+    Returns:
+        dict: A dictionary containing the precomputed values.
+    """
     spots = None
     if fish.spotJson is not None:
         with open(fish.spotJson, "r", encoding="utf-8") as f:
