@@ -271,7 +271,6 @@ def get_unsorted_fish(rootDirs=None, excludeDirs=None, verbose=False):
     return list(images.values())
 
 
-# TODO: Once the Fish objects are created, use the UUIDs to search for mask, spot, json, precomp, and precompAA files
 def get_fish_from_paths(paths, rootDirs=None, verbose=False):
     """Generate a list of Fish objects for the given parameters
 
@@ -288,6 +287,18 @@ def get_fish_from_paths(paths, rootDirs=None, verbose=False):
     if isinstance(paths, str):
         paths = [paths]
     images = {}
+    added_paths = []
+    for path in paths:
+        # replace rootDir of path with other rootDirs and add to added_paths
+        for rootDir in rootDirs:
+            if rootDir in path:
+                for otherRootDir in rootDirs:
+                    if rootDir != otherRootDir:
+                        new_path = path.replace(rootDir, otherRootDir)
+                        added_paths.append(new_path)
+
+    paths = paths + added_paths
+
     for path in paths:
         if verbose:
             print(f"Processing {path}")

@@ -37,9 +37,9 @@ echo "Virtual environment created and activated in $venv_path."
 
 # Install "arctic_charr_matcher" using pip
 if command -v pip &> /dev/null; then
-    pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ arctic-charr-matcher==0.1.0
+    pip install arctic-charr-matcher==0.1.4
 else
-    pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ arctic-charr-matcher==0.1.0
+    pip3 install arctic-charr-matcher==0.1.4
 fi
 
 ipython kernel install --user --name=.venv

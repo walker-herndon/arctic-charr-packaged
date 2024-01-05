@@ -78,7 +78,6 @@ class Matcher:
     Matcher class for matching images
     """
 
-    # TODO: Add check to ensure results, groth_cache, and aa_cache folders exist. If not, create them.
     def __init__(
         self,
         imgRoot="all_images",
@@ -132,6 +131,12 @@ class Matcher:
                                        first available CPU device. Can be ommitted if passing a custom spot and mask extractor.
         keyToPathTranslator (func)     Function of form (str) -> (str | Path) which takes in an image key, and converts it to the path of the location of the base image.
         """
+
+        # check that cache folders exist and create them if not
+        if not os.path.exists(grothCache):
+            os.makedirs(grothCache)
+        if not os.path.exists(astroalignCache):
+            os.makedirs(astroalignCache)
 
         self.grothCache = grothCache
         self.astroalignCache = astroalignCache

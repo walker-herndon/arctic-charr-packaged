@@ -190,7 +190,7 @@ class UnetSpotExtractor:
                         if verbose:
                             print(fish.spot_path)
                         Image.fromarray(newSpots).save(fish.spot_path)
-                        with open(fish.spotsJson, "w", encoding="utf-8") as f:
+                        with open(fish.spotJson, "w", encoding="utf-8") as f:
                             json.dump(getPointsFromImage(newSpots), f)
                 else:
                     print("No images in batch to process...")

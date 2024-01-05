@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="arctic_charr_matcher",
-    version="0.1.3",
+    version="0.1.4",
     packages=find_packages(include=["arctic_charr_matcher"]),
     install_requires=[
         "notebook>=7.0.0",
